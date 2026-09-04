@@ -1,0 +1,285 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  businessName  String?
+  email         String    @unique
+  phoneNumber   String?
+  password      String?
+  role          String    @default("CLIENT") // ADMIN or CLIENT
+  emailVerified DateTime?
+  image         String?
+  bio           String?
+  country       String?
+  state         String?
+  city          String?
+  address       String?
+  website       String?
+  instagram     String?
+  facebook      String?
+  linkedin      String?
+  isBlocked     Boolean   @default(false)
+  isVerified    Boolean   @default(false)
+  status        String    @default("ACTIVE")
+  otpCode       String?
+  otpExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  bookings        Booking[]
+  orders          Order[]
+  files           UserFile[]
+  contactMessages ContactMessage[]
+  messages        ChatMessage[]
+  replies         AdminReply[]
+  notifications   Notification[]
+  savedServices   SavedService[]
+  payments        Payment[]
+  invoices        Invoice[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+model PortfolioItem {
+  id           String   @id @default(uuid())
+  title        String
+  category     String   // Fashion, Clothing, Jewelry, Food, Beauty, Electronics, Restaurant
+  videoUrl     String
+  thumbnailUrl String
+  duration     String   @default("30s")
+  featured     Boolean  @default(false)
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Booking {
+  id            String   @id @default(uuid())
+  bookingRef    String   @unique
+  userId        String?
+  clientName    String
+  businessName  String
+  clientEmail   String
+  clientPhone   String
+  packageId     String   // starter, professional, premium
+  packageName   String
+  price         Int
+  description   String
+  refLink       String?
+  imageUrls     String   @default("[]") // JSON stringified array of upload URLs
+  status        String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
+  bookingDate   String?
+  bookingTime   String?
+  finalVideoUrl String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Order {
+  id                   String   @id @default(uuid())
+  orderNumber          String   @unique
+  userId               String
+  serviceName          String   @default("AI Product Reel")
+  packageName          String
+  package              String   @default("professional")
+  price                Int
+  status               String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
+  paymentStatus        String   @default("UNPAID") // PAID, UNPAID, PENDING, REFUNDED
+  expectedDeliveryDate String?
+  downloadFiles        String   @default("[]") // JSON string array
+  invoiceUrl           String?
+  videoUrl             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+  payments Payment[]
+  invoices Invoice[]
+}
+
+model ChatMessage {
+  id           String   @id @default(uuid())
+  orderId      String
+  senderId     String
+  senderName   String
+  senderRole   String   @default("CLIENT") // CLIENT or ADMIN
+  message      String
+  fileUrl      String?
+  fileType     String?  // image, document, voice
+  voiceNoteUrl String?
+  seen         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model AdminReply {
+  id        String   @id @default(uuid())
+  userId    String
+  subject   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO") // ORDER_ACCEPTED, STATUS_CHANGE, PAYMENT, ADMIN_REPLY, PROJECT_COMPLETED, FILE_UPLOADED, PASSWORD_CHANGED, PROFILE_UPDATED
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  orderId       String
+  userId        String
+  amount        Int
+  currency      String   @default("INR")
+  status        String   @default("COMPLETED") // COMPLETED, PENDING, FAILED
+  paymentMethod String   @default("UPI")
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  orderId       String
+  userId        String
+  invoiceNumber String   @unique
+  amount        Int
+  pdfUrl        String?
+  status        String   @default("PAID")
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SavedService {
+  id          String   @id @default(uuid())
+  userId      String
+  packageId   String
+  serviceName String
+  description String?
+  price       Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserFile {
+  id        String   @id @default(uuid())
+  title     String
+  fileUrl   String
+  fileType  String   @default("video/mp4")
+  fileSize  String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Package {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  price        Int
+  duration     String
+  revisions    String
+  deliveryDays String
+  features     String   // JSON stringified list of features
+  popular      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String
+  email     String
+  subject   String?
+  message   String
+  status    String   @default("UNREAD") // UNREAD, READ, REPLIED
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  clientName  String
+  business    String
+  rating      Int      @default(5)
+  comment     String
+  avatarUrl   String?
+  featured    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
