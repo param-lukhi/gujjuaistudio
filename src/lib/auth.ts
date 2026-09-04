@@ -18,22 +18,88 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        otp: { label: 'OTP', type: 'text' },
+        authType: { label: 'Auth Type', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please enter both email and password.');
+        if (!credentials?.email) {
+          throw new Error('Please enter your email address.');
         }
 
+        const cleanEmail = credentials.email.toLowerCase().trim();
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
+          where: { email: cleanEmail },
         });
 
-        if (!user || !user.password) {
-          throw new Error('No user found with this email address.');
+        if (!user) {
+          throw new Error('No account found with this email address.');
         }
 
         if (user.isBlocked) {
           throw new Error('Your account has been suspended. Please contact admin support.');
+        }
+
+        // OTP Login Flow
+        if (credentials.authType === 'otp' || (credentials.otp && !credentials.password)) {
+          if (!credentials.otp) {
+            throw new Error('Please enter the 6-digit OTP sent to your email.');
+          }
+
+          if (!user.otpCode || !user.otpExpires) {
+            throw new Error('No active OTP found. Please request a new OTP.');
+          }
+
+          if (new Date(user.otpExpires) < new Date()) {
+            throw new Error('OTP has expired. Please request a new code.');
+          }
+
+          if (user.otpCode.trim() !== credentials.otp.trim()) {
+            throw new Error('Invalid OTP code. Please check and try again.');
+          }
+
+          // Clear used OTP and mark user verified
+          const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              otpCode: null,
+              otpExpires: null,
+              isVerified: true,
+              emailVerified: user.emailVerified || new Date(),
+            },
+          });
+
+          return {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            username: updatedUser.username,
+            role: updatedUser.role,
+            businessName: updatedUser.businessName,
+            phoneNumber: updatedUser.phoneNumber,
+            emailVerified: updatedUser.emailVerified,
+            image: updatedUser.image,
+            bio: updatedUser.bio,
+            country: updatedUser.country,
+            state: updatedUser.state,
+            city: updatedUser.city,
+            address: updatedUser.address,
+            website: updatedUser.website,
+            instagram: updatedUser.instagram,
+            facebook: updatedUser.facebook,
+            linkedin: updatedUser.linkedin,
+            isBlocked: updatedUser.isBlocked,
+            isVerified: updatedUser.isVerified,
+            status: updatedUser.status,
+          };
+        }
+
+        // Password Login Flow
+        if (!credentials.password) {
+          throw new Error('Please enter your password.');
+        }
+
+        if (!user.password) {
+          throw new Error('This account was created with Google or OTP. Please use OTP or Google Login.');
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);

@@ -15,8 +15,14 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
 
+  const [authMode, setAuthMode] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -43,6 +49,14 @@ function LoginForm() {
     }
   }, [verified, errorParam]);
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   // Redirect logged in users based on role
@@ -56,6 +70,40 @@ function LoginForm() {
     }
   }, [status, session, router, callbackUrl]);
 
+  // Handle Send Login OTP
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email || !email.includes('@')) {
+      setErrorMessage('Please enter a valid email address first.');
+      return;
+    }
+
+    setSendingOtp(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const res = await fetch('/api/auth/send-login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send OTP.');
+      }
+
+      setOtpSent(true);
+      setCountdown(60);
+      setSuccessMessage('6-Digit OTP sent to your email address!');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to send OTP.');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -63,11 +111,30 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const res = await signIn('credentials', {
+      const credentials: any = {
         redirect: false,
         email,
-        password,
-      });
+      };
+
+      if (authMode === 'otp') {
+        if (!otp || otp.trim().length !== 6) {
+          setErrorMessage('Please enter the valid 6-digit OTP code.');
+          setLoading(false);
+          return;
+        }
+        credentials.otp = otp.trim();
+        credentials.authType = 'otp';
+      } else {
+        if (!password) {
+          setErrorMessage('Please enter your password.');
+          setLoading(false);
+          return;
+        }
+        credentials.password = password;
+        credentials.authType = 'password';
+      }
+
+      const res = await signIn('credentials', credentials);
 
       if (res?.error) {
         setErrorMessage(res.error);
@@ -109,8 +176,42 @@ function LoginForm() {
             Welcome Back
           </h1>
           <p className="text-xs sm:text-sm text-gray-400">
-            Log in to access your dashboard, orders, and files.
+            Sign in using your preferred method
           </p>
+        </div>
+
+        {/* Tab Switcher: Password vs OTP */}
+        <div className="grid grid-cols-2 p-1 bg-surface-100/90 rounded-2xl border border-surface-200/80">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode('password');
+              setErrorMessage('');
+            }}
+            className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              authMode === 'password'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Password
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode('otp');
+              setErrorMessage('');
+            }}
+            className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              authMode === 'otp'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Email OTP
+          </button>
         </div>
 
         {/* Notifications */}
@@ -145,53 +246,101 @@ function LoginForm() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-gray-300">Password</label>
-              <Link
-                href="/forgot-password"
-                className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
-              >
-                Forgot Password?
-              </Link>
+          {/* Password Mode Fields */}
+          {authMode === 'password' && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-300">Password</label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-surface-100/80 border border-surface-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition-all"
+                />
+              </div>
             </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-surface-100/80 border border-surface-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition-all"
-              />
+          )}
+
+          {/* OTP Mode Fields */}
+          {authMode === 'otp' && (
+            <div className="space-y-3">
+              {!otpSent ? (
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp || !email}
+                  className="w-full py-3 rounded-xl bg-brand-600/30 hover:bg-brand-600/50 border border-brand-500/40 text-xs font-bold text-brand-300 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {sendingOtp ? (
+                    <span className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-brand-300 border-t-transparent" />
+                  ) : (
+                    '📩 Send 6-Digit OTP to Email'
+                  )}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-300">Enter 6-Digit OTP</label>
+                    <button
+                      type="button"
+                      disabled={countdown > 0 || sendingOtp}
+                      onClick={handleSendOtp}
+                      className="text-xs font-semibold text-brand-400 hover:text-brand-300 disabled:opacity-40 transition-colors"
+                    >
+                      {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full bg-surface-100/80 border border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 text-center text-lg tracking-[8px] font-mono text-white placeholder-gray-600 outline-none transition-all"
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Remember Me */}
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-surface-200 bg-surface-100 text-brand-600 focus:ring-brand-500 accent-brand-600"
-              />
-              <span className="text-xs text-gray-300 font-medium">Remember me</span>
-            </label>
-          </div>
+          {authMode === 'password' && (
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-200 bg-surface-100 text-brand-600 focus:ring-brand-500 accent-brand-600"
+                />
+                <span className="text-xs text-gray-300 font-medium">Remember me</span>
+              </label>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (authMode === 'otp' && (!otpSent || otp.length !== 6))}
             className="btn-glow w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
           >
             {loading ? (
               <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
             ) : (
               <>
-                Sign In
+                {authMode === 'otp' ? 'Verify & Sign In' : 'Sign In'}
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
