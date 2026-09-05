@@ -19,6 +19,7 @@ import {
   RotateCcw,
   KeyRound,
   Check,
+  Info,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -33,6 +34,9 @@ function RegisterForm() {
   // Step 1: Form Details, Step 2: OTP Verification
   const [step, setStep] = useState<1 | 2>(1);
 
+  // Selected Method: 'email' | 'mobile'
+  const [authMethod, setAuthMethod] = useState<'email' | 'mobile'>('email');
+
   const [formData, setFormData] = useState({
     name: '',
     businessName: '',
@@ -42,9 +46,8 @@ function RegisterForm() {
     confirmPassword: '',
   });
 
-  // Selected verification channel: 'email' or 'mobile'
-  const [otpType, setOtpType] = useState<'email' | 'mobile'>('email');
   const [otp, setOtp] = useState('');
+  const [demoOtpNotice, setDemoOtpNotice] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -71,24 +74,27 @@ function RegisterForm() {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+    setDemoOtpNotice(null);
 
     if (!formData.name.trim()) {
       setErrorMessage('Please enter your full name.');
       return;
     }
 
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return;
-    }
-
-    if (!formData.phoneNumber.trim() || formData.phoneNumber.trim().length < 8) {
-      setErrorMessage('Please enter a valid mobile phone number.');
-      return;
+    if (authMethod === 'email') {
+      if (!formData.email.trim() || !formData.email.includes('@')) {
+        setErrorMessage('Please enter a valid email address.');
+        return;
+      }
+    } else {
+      if (!formData.phoneNumber.trim() || formData.phoneNumber.replace(/[^0-9]/g, '').length < 8) {
+        setErrorMessage('Please enter a valid 10-digit mobile number.');
+        return;
+      }
     }
 
     if (!formData.password) {
-      setErrorMessage('Please create a secure password.');
+      setErrorMessage('Please create a password.');
       return;
     }
 
@@ -102,7 +108,7 @@ function RegisterForm() {
       return;
     }
 
-    // Trigger OTP sending
+    // Trigger OTP dispatch
     setSendingOtp(true);
 
     try {
@@ -110,9 +116,9 @@ function RegisterForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: otpType,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
+          type: authMethod,
+          email: authMethod === 'email' ? formData.email : undefined,
+          phoneNumber: authMethod === 'mobile' ? formData.phoneNumber : undefined,
           name: formData.name,
         }),
       });
@@ -124,10 +130,13 @@ function RegisterForm() {
       } else {
         setStep(2);
         setCountdown(60);
+        if (data.demoOtp) {
+          setDemoOtpNotice(data.demoOtp);
+        }
         setSuccessMessage(
-          otpType === 'mobile'
-            ? `6-Digit OTP has been sent to your Mobile Number (${formData.phoneNumber}).`
-            : `6-Digit OTP has been sent to your Email (${formData.email}).`
+          authMethod === 'mobile'
+            ? `6-digit OTP sent to Mobile Number (${formData.phoneNumber}).`
+            : `6-digit OTP sent to Email (${formData.email}).`
         );
       }
     } catch (err: any) {
@@ -149,9 +158,9 @@ function RegisterForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: otpType,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
+          type: authMethod,
+          email: authMethod === 'email' ? formData.email : undefined,
+          phoneNumber: authMethod === 'mobile' ? formData.phoneNumber : undefined,
           name: formData.name,
         }),
       });
@@ -162,8 +171,11 @@ function RegisterForm() {
         setErrorMessage(data.error || 'Failed to resend OTP.');
       } else {
         setCountdown(60);
+        if (data.demoOtp) {
+          setDemoOtpNotice(data.demoOtp);
+        }
         setSuccessMessage(
-          otpType === 'mobile'
+          authMethod === 'mobile'
             ? `New 6-digit OTP sent to ${formData.phoneNumber}!`
             : `New 6-digit OTP sent to ${formData.email}!`
         );
@@ -175,7 +187,7 @@ function RegisterForm() {
     }
   };
 
-  // Step 2 Submission: Verify OTP & Create Account
+  // Step 2: Verify OTP & Create Account
   const handleVerifyAndRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -195,7 +207,7 @@ function RegisterForm() {
         body: JSON.stringify({
           ...formData,
           otp: otp.trim(),
-          otpType,
+          otpType: authMethod,
         }),
       });
 
@@ -205,12 +217,17 @@ function RegisterForm() {
         setErrorMessage(data.error || 'Invalid OTP code. Please check and try again.');
         setVerifying(false);
       } else {
-        setSuccessMessage('Verification successful! Account created. Signing you in...');
+        setSuccessMessage('Account verified & created successfully! Signing you in...');
+
+        const loginEmailOrPhone =
+          authMethod === 'mobile'
+            ? formData.phoneNumber
+            : formData.email;
 
         // Auto-login upon successful registration
         const loginRes = await signIn('credentials', {
           redirect: false,
-          email: formData.email,
+          email: loginEmailOrPhone,
           password: formData.password,
         });
 
@@ -253,45 +270,49 @@ function RegisterForm() {
           </h1>
           <p className="text-xs sm:text-sm text-gray-400">
             {step === 1
-              ? 'Fill your details and choose Email or Mobile OTP verification.'
-              : `Enter the 6-digit code sent to your ${otpType === 'mobile' ? 'Mobile Number' : 'Email Address'}.`}
+              ? `Register with ${authMethod === 'email' ? 'Email OTP' : 'Mobile Number OTP'} verification.`
+              : `Enter the 6-digit OTP sent to your ${authMethod === 'mobile' ? 'Mobile Number' : 'Email Address'}.`}
           </p>
         </div>
 
-        {/* Step Progress Indicator */}
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === 1
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/30'
-                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              }`}
-            >
-              {step === 2 ? <Check className="w-3.5 h-3.5" /> : '1'}
-            </span>
-            <span className={`text-xs font-semibold ${step === 1 ? 'text-white' : 'text-gray-400'}`}>
-              Details
-            </span>
+        {/* Step 1 Progress Indicator & Method Switcher */}
+        {step === 1 && (
+          <div className="space-y-4">
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-2 p-1 bg-surface-100/90 rounded-2xl border border-surface-200/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMethod('email');
+                  setErrorMessage('');
+                }}
+                className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                  authMethod === 'email'
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Email OTP
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMethod('mobile');
+                  setErrorMessage('');
+                }}
+                className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                  authMethod === 'mobile'
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                Mobile OTP
+              </button>
+            </div>
           </div>
-
-          <div className={`w-10 h-0.5 ${step === 2 ? 'bg-brand-500' : 'bg-surface-200'}`} />
-
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === 2
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/30'
-                  : 'bg-surface-200 text-gray-500'
-              }`}
-            >
-              2
-            </span>
-            <span className={`text-xs font-semibold ${step === 2 ? 'text-white' : 'text-gray-400'}`}>
-              OTP Verification
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Alerts / Notifications */}
         {successMessage && (
@@ -344,7 +365,9 @@ function RegisterForm() {
                 <div className="w-full border-t border-surface-200/80" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#0c1017] px-3 text-gray-500 font-medium">Or register with OTP verification</span>
+                <span className="bg-[#0c1017] px-3 text-gray-500 font-medium">
+                  Or register with {authMethod === 'email' ? 'Email' : 'Mobile Number'}
+                </span>
               </div>
             </div>
 
@@ -368,30 +391,32 @@ function RegisterForm() {
                 </div>
               </div>
 
-              {/* Email Address */}
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
-                  Email Address <span className="text-brand-400">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="name@business.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Phone & Business Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Conditional Field: EMAIL (Only shown if Email Mode is active) */}
+              {authMethod === 'email' && (
                 <div>
                   <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
-                    Mobile Number <span className="text-brand-400">*</span>
+                    Email Address <span className="text-brand-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="name@business.com"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Conditional Field: MOBILE NUMBER (Only shown if Mobile Mode is active) */}
+              {authMethod === 'mobile' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                    Mobile Phone Number <span className="text-brand-400">*</span>
                   </label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -406,22 +431,23 @@ function RegisterForm() {
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
-                    Business / Brand Name
-                  </label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      name="businessName"
-                      value={formData.businessName}
-                      onChange={handleChange}
-                      placeholder="e.g. Surat Jewels"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-                    />
-                  </div>
+              {/* Business / Brand Name (Optional) */}
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Business / Brand Name <span className="text-gray-500 text-[10px] normal-case">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <Building className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleChange}
+                    placeholder="e.g. Surat Jewels"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                  />
                 </div>
               </div>
 
@@ -466,66 +492,6 @@ function RegisterForm() {
                 </div>
               </div>
 
-              {/* Prominent Verification Channel Selector */}
-              <div className="pt-2">
-                <label className="block text-xs font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center justify-between">
-                  <span>Send Verification Code Via <span className="text-brand-400">*</span></span>
-                  <span className="text-[11px] text-brand-400 font-medium lowercase">Select Email or Mobile</span>
-                </label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Email OTP Choice */}
-                  <button
-                    type="button"
-                    onClick={() => setOtpType('email')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 ${
-                      otpType === 'email'
-                        ? 'bg-brand-600/15 border-brand-500 text-white shadow-lg shadow-brand-500/10 ring-1 ring-brand-500'
-                        : 'bg-surface-100/80 border-surface-200 text-gray-400 hover:border-gray-600 hover:text-white'
-                    }`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        otpType === 'email'
-                          ? 'bg-brand-600 text-white'
-                          : 'bg-surface-200 text-gray-400'
-                      }`}
-                    >
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">Email OTP</div>
-                      <div className="text-[10px] text-gray-400">Via Gmail / Inbox</div>
-                    </div>
-                  </button>
-
-                  {/* Mobile OTP Choice */}
-                  <button
-                    type="button"
-                    onClick={() => setOtpType('mobile')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 ${
-                      otpType === 'mobile'
-                        ? 'bg-brand-600/15 border-brand-500 text-white shadow-lg shadow-brand-500/10 ring-1 ring-brand-500'
-                        : 'bg-surface-100/80 border-surface-200 text-gray-400 hover:border-gray-600 hover:text-white'
-                    }`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        otpType === 'mobile'
-                          ? 'bg-brand-600 text-white'
-                          : 'bg-surface-200 text-gray-400'
-                      }`}
-                    >
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">Mobile OTP</div>
-                      <div className="text-[10px] text-gray-400">Via SMS / Phone</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
               {/* Submit Button (Proceed to OTP) */}
               <button
                 type="submit"
@@ -535,11 +501,11 @@ function RegisterForm() {
                 {sendingOtp ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Sending 6-Digit OTP...
+                    Sending OTP Code...
                   </span>
                 ) : (
                   <>
-                    Send Verification Code ({otpType === 'email' ? 'Email' : 'Mobile'})
+                    Send 6-Digit OTP to {authMethod === 'email' ? 'Email' : 'Mobile Number'}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -559,10 +525,27 @@ function RegisterForm() {
               <p className="text-xs text-gray-400">
                 We sent a 6-digit OTP code to{' '}
                 <span className="font-semibold text-brand-300">
-                  {otpType === 'mobile' ? formData.phoneNumber : formData.email}
+                  {authMethod === 'mobile' ? formData.phoneNumber : formData.email}
                 </span>
               </p>
             </div>
+
+            {/* If SMS demo code is provided in local/dev */}
+            {demoOtpNotice && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 shrink-0" />
+                  <span>SMS Test Code: <strong className="tracking-widest font-mono text-sm">{demoOtpNotice}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOtp(demoOtpNotice)}
+                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 rounded text-[11px] font-bold text-amber-200 transition-all"
+                >
+                  Auto-fill
+                </button>
+              </div>
+            )}
 
             <div className="space-y-2">
               <input
@@ -621,7 +604,7 @@ function RegisterForm() {
               className="w-full py-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 text-xs font-semibold text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Edit Account Information / Change Method
+              Edit Information / Change Method
             </button>
           </form>
         )}

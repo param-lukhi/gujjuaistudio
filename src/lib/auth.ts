@@ -23,16 +23,25 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email) {
-          throw new Error('Please enter your email address.');
+          throw new Error('Please enter your email address or mobile number.');
         }
 
-        const cleanEmail = credentials.email.toLowerCase().trim();
-        const user = await prisma.user.findUnique({
+        const input = credentials.email.trim();
+        const cleanEmail = input.toLowerCase();
+        const cleanPhone = input.replace(/\s+/g, '');
+
+        let user = await prisma.user.findUnique({
           where: { email: cleanEmail },
         });
 
         if (!user) {
-          throw new Error('No account found with this email address.');
+          user = await prisma.user.findFirst({
+            where: { phoneNumber: cleanPhone },
+          });
+        }
+
+        if (!user) {
+          throw new Error('No account found with these credentials.');
         }
 
         if (user.isBlocked) {

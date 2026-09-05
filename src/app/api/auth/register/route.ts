@@ -17,16 +17,16 @@ export async function POST(req: Request) {
       otpType = 'email',
     } = body;
 
-    if (!name || !email || !phoneNumber || !password) {
+    if (!name || !name.trim()) {
       return NextResponse.json(
-        { error: 'Name, email, phone number, and password are required.' },
+        { error: 'Please enter your full name.' },
         { status: 400 }
       );
     }
 
-    if (!otp || otp.trim().length !== 6) {
+    if (!password || password.length < 6) {
       return NextResponse.json(
-        { error: 'Please enter a valid 6-digit OTP verification code.' },
+        { error: 'Password must be at least 6 characters long.' },
         { status: 400 }
       );
     }
@@ -38,34 +38,68 @@ export async function POST(req: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (!otp || otp.trim().length !== 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long.' },
+        { error: 'Please enter a valid 6-digit OTP verification code.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.toLowerCase().trim();
-    const cleanPhone = phoneNumber.trim().replace(/\s+/g, '');
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    const cleanPhone = phoneNumber ? phoneNumber.trim().replace(/\s+/g, '') : '';
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: cleanEmail },
-    });
+    let userEmail = cleanEmail;
+    let userPhone = cleanPhone || null;
+    let identifier = '';
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'An account with this email address already exists. Please log in.' },
-        { status: 400 }
-      );
+    if (otpType === 'mobile') {
+      if (!cleanPhone || cleanPhone.replace(/[^0-9]/g, '').length < 8) {
+        return NextResponse.json(
+          { error: 'Valid mobile number is required for mobile registration.' },
+          { status: 400 }
+        );
+      }
+
+      // If user registered with mobile without email, create unique mobile email identity
+      userEmail = cleanEmail || `${cleanPhone.replace(/[^0-9]/g, '')}@mobile.gujjuaistudio.com`;
+      identifier = `register_mobile:${cleanPhone}`;
+
+      // Check if phone number already exists
+      const existingPhoneUser = await prisma.user.findFirst({
+        where: { phoneNumber: cleanPhone },
+      });
+
+      if (existingPhoneUser) {
+        return NextResponse.json(
+          { error: 'An account with this mobile number already exists. Please sign in.' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Email registration
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        return NextResponse.json(
+          { error: 'Valid email address is required for email registration.' },
+          { status: 400 }
+        );
+      }
+
+      identifier = `register_email:${cleanEmail}`;
+
+      // Check if email already exists
+      const existingEmailUser = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      });
+
+      if (existingEmailUser) {
+        return NextResponse.json(
+          { error: 'An account with this email address already exists. Please sign in.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Verify OTP against VerificationToken database table
-    const identifier =
-      otpType === 'mobile'
-        ? `register_mobile:${cleanPhone}`
-        : `register_email:${cleanEmail}`;
-
     const tokenRecord = await prisma.verificationToken.findFirst({
       where: {
         identifier,
@@ -82,7 +116,7 @@ export async function POST(req: Request) {
     if (new Date(tokenRecord.expires) < new Date()) {
       await prisma.verificationToken.deleteMany({ where: { identifier } });
       return NextResponse.json(
-        { error: 'OTP verification code has expired. Please request a new OTP.' },
+        { error: 'OTP verification code has expired. Please request a new code.' },
         { status: 400 }
       );
     }
@@ -107,8 +141,8 @@ export async function POST(req: Request) {
       data: {
         name,
         businessName: businessName || null,
-        email: cleanEmail,
-        phoneNumber,
+        email: userEmail,
+        phoneNumber: userPhone,
         password: hashedPassword,
         role: 'CLIENT',
         isVerified: true,
@@ -116,33 +150,35 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send Welcome Email
-    try {
-      await sendEmail({
-        to: cleanEmail,
-        subject: '🎉 Welcome to Gujju AI Studio!',
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #0c1017; border-radius: 20px; border: 1px solid #1f293d; color: #ffffff; padding: 32px; text-align: center;">
-            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 16px; background: linear-gradient(135deg, #6366f1, #06b6d4); font-size: 28px; margin-bottom: 16px;">
-              🚀
+    // Send Welcome Email if email is available and not a placeholder
+    if (userEmail && !userEmail.includes('@mobile.gujjuaistudio.com')) {
+      try {
+        await sendEmail({
+          to: userEmail,
+          subject: '🎉 Welcome to Gujju AI Studio!',
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #0c1017; border-radius: 20px; border: 1px solid #1f293d; color: #ffffff; padding: 32px; text-align: center;">
+              <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 16px; background: linear-gradient(135deg, #6366f1, #06b6d4); font-size: 28px; margin-bottom: 16px;">
+                🚀
+              </div>
+              <h2 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800;">Welcome, ${name}!</h2>
+              <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+                Your account has been successfully created and verified. You're now ready to book AI video reels and manage orders.
+              </p>
+              
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 14px; margin: 8px 0 24px 0; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
+                Go to Dashboard →
+              </a>
+              
+              <div style="border-top: 1px solid #1e293b; margin-top: 24px; padding-top: 16px; color: #475569; font-size: 11px;">
+                Gujju AI Studio • Next-Gen AI Video & Reel Production
+              </div>
             </div>
-            <h2 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800;">Welcome, ${name}!</h2>
-            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
-              Your account has been successfully created and verified. You're now ready to create high-converting AI videos, book production slots, and manage orders with Gujju AI Studio.
-            </p>
-            
-            <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 14px; margin: 8px 0 24px 0; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
-              Go to Dashboard →
-            </a>
-            
-            <div style="border-top: 1px solid #1e293b; margin-top: 24px; padding-top: 16px; color: #475569; font-size: 11px;">
-              Gujju AI Studio • Next-Gen AI Video & Reel Production
-            </div>
-          </div>
-        `,
-      });
-    } catch (mailErr) {
-      console.error('Welcome email sending error:', mailErr);
+          `,
+        });
+      } catch (mailErr) {
+        console.error('Welcome email sending error:', mailErr);
+      }
     }
 
     return NextResponse.json(
@@ -154,6 +190,7 @@ export async function POST(req: Request) {
           email: newUser.email,
           role: newUser.role,
         },
+        loginIdentifier: userEmail,
       },
       { status: 201 }
     );
