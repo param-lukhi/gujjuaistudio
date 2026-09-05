@@ -466,7 +466,7 @@ function BookingWizard() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Raj Patel"
+                  placeholder="Enter your full name"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs sm:text-sm focus:outline-none focus:border-brand-500"
                 />
               </div>

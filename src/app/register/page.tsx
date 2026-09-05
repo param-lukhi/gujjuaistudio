@@ -385,7 +385,7 @@ function RegisterForm() {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="e.g. Raj Patel"
+                    placeholder="Enter your name"
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                   />
                 </div>
@@ -405,7 +405,7 @@ function RegisterForm() {
                       required
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="name@business.com"
+                      placeholder="Enter your email address"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                     />
                   </div>
@@ -426,7 +426,7 @@ function RegisterForm() {
                       required
                       value={formData.phoneNumber}
                       onChange={handleChange}
-                      placeholder="+91 98765 43210"
+                      placeholder="Enter your mobile number"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                     />
                   </div>
@@ -445,7 +445,7 @@ function RegisterForm() {
                     name="businessName"
                     value={formData.businessName}
                     onChange={handleChange}
-                    placeholder="e.g. Surat Jewels"
+                    placeholder="Enter your business or brand name"
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                   />
                 </div>
