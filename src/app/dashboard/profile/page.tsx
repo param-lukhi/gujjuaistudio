@@ -552,7 +552,7 @@ export default function ProfilePage() {
                       required
                       value={profile.name || ''}
                       onChange={handleInputChange}
-                      placeholder="e.g. Anand Patel"
+                      placeholder="Enter your full name"
                       className="w-full bg-surface-100 border border-surface-200 focus:border-brand-500 rounded-xl py-2.5 px-4 text-xs text-white outline-none"
                     />
                   </div>
@@ -566,7 +566,7 @@ export default function ProfilePage() {
                       name="username"
                       value={profile.username || ''}
                       onChange={handleInputChange}
-                      placeholder="e.g. anand_patel"
+                      placeholder="Enter your username"
                       className="w-full bg-surface-100 border border-surface-200 focus:border-brand-500 rounded-xl py-2.5 px-4 text-xs text-white font-mono outline-none"
                     />
                   </div>
@@ -588,7 +588,7 @@ export default function ProfilePage() {
                       name="phoneNumber"
                       value={profile.phoneNumber || ''}
                       onChange={handleInputChange}
-                      placeholder="+91 98765 43210"
+                      placeholder="Enter your mobile number"
                       className="w-full bg-surface-100 border border-surface-200 focus:border-brand-500 rounded-xl py-2.5 px-4 text-xs text-white outline-none"
                     />
                   </div>
@@ -617,7 +617,7 @@ export default function ProfilePage() {
                       name="businessName"
                       value={profile.businessName || ''}
                       onChange={handleInputChange}
-                      placeholder="e.g. Surat Silk Trends"
+                      placeholder="Enter company or brand name"
                       className="w-full bg-surface-100 border border-surface-200 focus:border-brand-500 rounded-xl py-2.5 px-4 text-xs text-white outline-none"
                     />
                   </div>

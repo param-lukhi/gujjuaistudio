@@ -232,15 +232,15 @@ function LoginForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-300">Email Address</label>
+            <label className="text-xs font-semibold text-gray-300">Email Address or Mobile Number</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="Enter your email or mobile number"
                 className="w-full bg-surface-100/80 border border-surface-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition-all"
               />
             </div>
@@ -265,7 +265,7 @@ function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   className="w-full bg-surface-100/80 border border-surface-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition-all"
                 />
               </div>
@@ -285,7 +285,7 @@ function LoginForm() {
                   {sendingOtp ? (
                     <span className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-brand-300 border-t-transparent" />
                   ) : (
-                    '📩 Send 6-Digit OTP to Email'
+                    '📩 Send 6-Digit OTP'
                   )}
                 </button>
               ) : (
@@ -307,7 +307,7 @@ function LoginForm() {
                     required
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
+                    placeholder="Enter 6-digit OTP"
                     className="w-full bg-surface-100/80 border border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 text-center text-lg tracking-[8px] font-mono text-white placeholder-gray-600 outline-none transition-all"
                   />
                 </div>

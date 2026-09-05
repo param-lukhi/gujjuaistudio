@@ -187,7 +187,7 @@ export default function ContactPage() {
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="Jayesh Patel"
+                          placeholder="Enter your full name"
                           disabled={!isAuthenticated}
                           className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-surface-200/80 text-white text-xs focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
                         />
@@ -200,7 +200,7 @@ export default function ContactPage() {
                           required
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          placeholder="jayesh@brand.com"
+                          placeholder="Enter your email address"
                           disabled={!isAuthenticated}
                           className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-surface-200/80 text-white text-xs focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
                         />

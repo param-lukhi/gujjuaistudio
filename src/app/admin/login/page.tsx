@@ -88,7 +88,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@gujjuai.com"
+              placeholder="Enter owner or admin email address"
               className="w-full px-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
             />
           </div>
@@ -100,7 +100,7 @@ export default function AdminLoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Enter admin password"
               className="w-full px-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
             />
           </div>
