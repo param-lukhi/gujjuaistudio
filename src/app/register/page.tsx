@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { getFirebaseAuth } from '@/lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +56,10 @@ function RegisterForm() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Firebase confirmation result reference
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
   // Countdown timer for Resend OTP
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -67,7 +73,7 @@ function RegisterForm() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Step 1 Submission: Validate and Send OTP
+  // Step 1 Submission: Validate and Send OTP (Email via SMTP or Mobile via Google Firebase)
   const handleProceedToOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -85,7 +91,7 @@ function RegisterForm() {
       }
     } else {
       if (!formData.phoneNumber.trim() || formData.phoneNumber.replace(/[^0-9]/g, '').length < 8) {
-        setErrorMessage('Please enter a valid 10-digit mobile number.');
+        setErrorMessage('Please enter a valid mobile number with country code (e.g. +91 98765 43210).');
         return;
       }
     }
@@ -105,36 +111,87 @@ function RegisterForm() {
       return;
     }
 
-    // Trigger OTP dispatch
     setSendingOtp(true);
 
     try {
-      const res = await fetch('/api/auth/send-register-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: authMethod,
-          email: authMethod === 'email' ? formData.email : undefined,
-          phoneNumber: authMethod === 'mobile' ? formData.phoneNumber : undefined,
-          name: formData.name,
-        }),
-      });
+      if (authMethod === 'email') {
+        // Email OTP Flow via Server SMTP
+        const res = await fetch('/api/auth/send-register-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'email',
+            email: formData.email,
+            name: formData.name,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to send OTP. Please check your details.');
+        if (!res.ok) {
+          setErrorMessage(data.error || 'Failed to send Email OTP. Please check your email.');
+        } else {
+          setStep(2);
+          setCountdown(60);
+          setSuccessMessage(`6-digit OTP code sent to your Email (${formData.email}).`);
+        }
       } else {
-        setStep(2);
-        setCountdown(60);
-        setSuccessMessage(
-          authMethod === 'mobile'
-            ? `6-digit OTP sent to your Mobile Number (${formData.phoneNumber}).`
-            : `6-digit OTP sent to your Email (${formData.email}).`
-        );
+        // Mobile OTP Flow via Google Firebase Auth (10,000 Free SMS/Month Worldwide)
+        const fb = getFirebaseAuth();
+
+        if (fb) {
+          // Format phone number to E.164 standard
+          let formattedPhone = formData.phoneNumber.trim();
+          if (!formattedPhone.startsWith('+')) {
+            const rawDigits = formattedPhone.replace(/[^0-9]/g, '');
+            formattedPhone = rawDigits.length === 10 ? `+91${rawDigits}` : `+${rawDigits}`;
+          }
+
+          // Initialize invisible reCAPTCHA verifier
+          if (!recaptchaVerifierRef.current) {
+            recaptchaVerifierRef.current = new RecaptchaVerifier(fb.auth, 'recaptcha-container', {
+              size: 'invisible',
+            });
+          }
+
+          const confirmation = await signInWithPhoneNumber(
+            fb.auth,
+            formattedPhone,
+            recaptchaVerifierRef.current
+          );
+
+          confirmationResultRef.current = confirmation;
+          setStep(2);
+          setCountdown(60);
+          setSuccessMessage(`6-digit SMS OTP sent to your Mobile Number (${formattedPhone}).`);
+        } else {
+          // Fallback to server SMS dispatch if Firebase keys are not in frontend env
+          const res = await fetch('/api/auth/send-register-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'mobile',
+              phoneNumber: formData.phoneNumber,
+              name: formData.name,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            setErrorMessage(data.error || 'Failed to send SMS OTP.');
+          } else {
+            setStep(2);
+            setCountdown(60);
+            setSuccessMessage(`6-digit OTP sent to your Mobile Number (${formData.phoneNumber}).`);
+          }
+        }
       }
     } catch (err: any) {
-      setErrorMessage('Network connection error. Please try again.');
+      console.error('Send OTP error:', err);
+      setErrorMessage(
+        err.message || 'Failed to send OTP code. Please check your connection and try again.'
+      );
     } finally {
       setSendingOtp(false);
     }
@@ -148,31 +205,66 @@ function RegisterForm() {
     setSendingOtp(true);
 
     try {
-      const res = await fetch('/api/auth/send-register-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: authMethod,
-          email: authMethod === 'email' ? formData.email : undefined,
-          phoneNumber: authMethod === 'mobile' ? formData.phoneNumber : undefined,
-          name: formData.name,
-        }),
-      });
+      if (authMethod === 'email') {
+        const res = await fetch('/api/auth/send-register-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'email',
+            email: formData.email,
+            name: formData.name,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to resend OTP.');
+        if (!res.ok) {
+          setErrorMessage(data.error || 'Failed to resend OTP.');
+        } else {
+          setCountdown(60);
+          setSuccessMessage(`New 6-digit OTP sent to ${formData.email}!`);
+        }
       } else {
-        setCountdown(60);
-        setSuccessMessage(
-          authMethod === 'mobile'
-            ? `New 6-digit OTP sent to ${formData.phoneNumber}!`
-            : `New 6-digit OTP sent to ${formData.email}!`
-        );
+        const fb = getFirebaseAuth();
+        if (fb && recaptchaVerifierRef.current) {
+          let formattedPhone = formData.phoneNumber.trim();
+          if (!formattedPhone.startsWith('+')) {
+            const rawDigits = formattedPhone.replace(/[^0-9]/g, '');
+            formattedPhone = rawDigits.length === 10 ? `+91${rawDigits}` : `+${rawDigits}`;
+          }
+
+          const confirmation = await signInWithPhoneNumber(
+            fb.auth,
+            formattedPhone,
+            recaptchaVerifierRef.current
+          );
+
+          confirmationResultRef.current = confirmation;
+          setCountdown(60);
+          setSuccessMessage(`New 6-digit SMS OTP sent to ${formattedPhone}!`);
+        } else {
+          const res = await fetch('/api/auth/send-register-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'mobile',
+              phoneNumber: formData.phoneNumber,
+              name: formData.name,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            setErrorMessage(data.error || 'Failed to resend OTP.');
+          } else {
+            setCountdown(60);
+            setSuccessMessage(`New 6-digit OTP sent to ${formData.phoneNumber}!`);
+          }
+        }
       }
     } catch (err: any) {
-      setErrorMessage('Failed to resend OTP. Please check your connection.');
+      setErrorMessage(err.message || 'Failed to resend OTP.');
     } finally {
       setSendingOtp(false);
     }
@@ -192,6 +284,22 @@ function RegisterForm() {
     setVerifying(true);
 
     try {
+      let isFirebaseVerified = false;
+
+      // If Firebase confirmation result is present, verify directly with Google Firebase
+      if (authMethod === 'mobile' && confirmationResultRef.current) {
+        try {
+          await confirmationResultRef.current.confirm(otp.trim());
+          isFirebaseVerified = true;
+        } catch (firebaseErr: any) {
+          console.error('Firebase OTP confirmation error:', firebaseErr);
+          setErrorMessage('Invalid OTP verification code. Please check and try again.');
+          setVerifying(false);
+          return;
+        }
+      }
+
+      // Submit verified user to backend
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,21 +307,20 @@ function RegisterForm() {
           ...formData,
           otp: otp.trim(),
           otpType: authMethod,
+          firebaseVerified: isFirebaseVerified,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || 'Invalid OTP code. Please check and try again.');
+        setErrorMessage(data.error || 'Registration failed. Please try again.');
         setVerifying(false);
       } else {
         setSuccessMessage('Account verified & created successfully! Signing you in...');
 
         const loginEmailOrPhone =
-          authMethod === 'mobile'
-            ? formData.phoneNumber
-            : formData.email;
+          authMethod === 'mobile' ? formData.phoneNumber : formData.email;
 
         // Auto-login upon successful registration
         const loginRes = await signIn('credentials', {
@@ -248,6 +355,9 @@ function RegisterForm() {
 
   return (
     <div className="w-full max-w-lg relative z-10">
+      {/* Invisible container for Firebase reCAPTCHA */}
+      <div id="recaptcha-container" />
+
       <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -417,7 +527,7 @@ function RegisterForm() {
                       required
                       value={formData.phoneNumber}
                       onChange={handleChange}
-                      placeholder="Enter your mobile number"
+                      placeholder="Enter your mobile number (e.g. +91 98765 43210)"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                     />
                   </div>
@@ -457,7 +567,7 @@ function RegisterForm() {
                       minLength={6}
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="••••••••"
+                      placeholder="Enter your password"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                     />
                   </div>
@@ -476,7 +586,7 @@ function RegisterForm() {
                       minLength={6}
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      placeholder="••••••••"
+                      placeholder="Confirm password"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                     />
                   </div>

@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       confirmPassword,
       otp,
       otpType = 'email',
+      firebaseVerified = false,
     } = body;
 
     if (!name || !name.trim()) {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!otp || otp.trim().length !== 6) {
+    if (!firebaseVerified && (!otp || otp.trim().length !== 6)) {
       return NextResponse.json(
         { error: 'Please enter a valid 6-digit OTP verification code.' },
         { status: 400 }
@@ -99,39 +100,41 @@ export async function POST(req: Request) {
       }
     }
 
-    // Verify OTP against VerificationToken database table
-    const tokenRecord = await prisma.verificationToken.findFirst({
-      where: {
-        identifier,
-      },
-    });
+    // Verify OTP if not already verified via Google Firebase
+    if (!firebaseVerified) {
+      const tokenRecord = await prisma.verificationToken.findFirst({
+        where: {
+          identifier,
+        },
+      });
 
-    if (!tokenRecord) {
-      return NextResponse.json(
-        { error: 'No active OTP verification code found. Please request a new OTP.' },
-        { status: 400 }
-      );
+      if (!tokenRecord) {
+        return NextResponse.json(
+          { error: 'No active OTP verification code found. Please request a new OTP.' },
+          { status: 400 }
+        );
+      }
+
+      if (new Date(tokenRecord.expires) < new Date()) {
+        await prisma.verificationToken.deleteMany({ where: { identifier } });
+        return NextResponse.json(
+          { error: 'OTP verification code has expired. Please request a new code.' },
+          { status: 400 }
+        );
+      }
+
+      if (tokenRecord.token.trim() !== otp.trim()) {
+        return NextResponse.json(
+          { error: 'Invalid OTP verification code. Please check and try again.' },
+          { status: 400 }
+        );
+      }
+
+      // Delete used OTP token
+      await prisma.verificationToken.deleteMany({
+        where: { identifier },
+      });
     }
-
-    if (new Date(tokenRecord.expires) < new Date()) {
-      await prisma.verificationToken.deleteMany({ where: { identifier } });
-      return NextResponse.json(
-        { error: 'OTP verification code has expired. Please request a new code.' },
-        { status: 400 }
-      );
-    }
-
-    if (tokenRecord.token.trim() !== otp.trim()) {
-      return NextResponse.json(
-        { error: 'Invalid OTP verification code. Please check and try again.' },
-        { status: 400 }
-      );
-    }
-
-    // Delete used OTP token
-    await prisma.verificationToken.deleteMany({
-      where: { identifier },
-    });
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
