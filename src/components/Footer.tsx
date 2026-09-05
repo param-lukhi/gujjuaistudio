@@ -65,7 +65,14 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-brand-400 shrink-0" />
-                <span>+91 98765 43210 (WhatsApp Support)</span>
+                <a
+                  href="https://wa.me/919925263558?text=Hello%20Gujju%20AI%20Studio%2C%20I%20want%20to%20inquire%20about%20AI%20video%20ads"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  +91 99252 63558 (WhatsApp Support)
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-brand-400 shrink-0" />

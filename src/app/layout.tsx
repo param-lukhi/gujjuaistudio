@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import NextAuthProvider from '@/components/providers/NextAuthProvider';
+import FloatingSupportWidget from '@/components/FloatingSupportWidget';
 
 export const metadata: Metadata = {
   title: 'Gujju AI Studio | AI Product Ads That Stop the Scroll',
@@ -16,7 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark scroll-smooth">
       <body className="bg-[#080B11] text-white selection:bg-brand-500 selection:text-white min-h-screen flex flex-col">
-        <NextAuthProvider>{children}</NextAuthProvider>
+        <NextAuthProvider>
+          {children}
+          <FloatingSupportWidget />
+        </NextAuthProvider>
       </body>
     </html>
   );

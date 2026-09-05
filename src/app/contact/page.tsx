@@ -101,15 +101,23 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0">
-                    <Phone className="w-5 h-5" />
+                <a
+                  href="https://wa.me/919925263558?text=Hello%20Gujju%20AI%20Studio%2C%20I%20want%20to%20inquire%20about%20AI%20video%20ads"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center justify-between gap-4 hover:border-[#25D366]/50 hover:bg-[#25D366]/5 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-gray-400 uppercase font-semibold">Direct WhatsApp & Call</h4>
+                      <p className="text-sm font-bold text-white group-hover:text-[#25D366] transition-colors">+91 99252 63558</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs text-gray-400 uppercase font-semibold">WhatsApp & Call</h4>
-                    <p className="text-sm font-bold text-white">+91 98765 43210</p>
-                  </div>
-                </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#25D366]/20 text-[#25D366]">Chat →</span>
+                </a>
 
                 <div className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0">
