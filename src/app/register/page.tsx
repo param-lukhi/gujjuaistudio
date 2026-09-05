@@ -379,10 +379,12 @@ function RegisterForm() {
       <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-accent-cyan p-0.5 mx-auto shadow-lg shadow-brand-500/30">
-            <div className="w-full h-full bg-[#080B11] rounded-[14px] flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-brand-400" />
-            </div>
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-brand-500/30 mx-auto shadow-lg shadow-brand-500/30 bg-[#080B11]">
+            <img
+              src="/logo.png"
+              alt="Gujju AI Studio Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {step === 1 ? 'Create Your Account' : 'Verify Your Account'}

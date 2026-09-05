@@ -49,10 +49,12 @@ export default function AdminSidebar() {
 
         {/* Brand */}
         <Link href="/" className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-accent-cyan p-0.5">
-            <div className="w-full h-full bg-[#080B11] rounded-[6px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-brand-400" />
-            </div>
+          <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-500/30 shadow-md shadow-brand-500/20 bg-[#080B11] shrink-0">
+            <img
+              src="/logo.png"
+              alt="Gujju AI Studio Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <span className="font-extrabold text-sm tracking-tight text-white block">

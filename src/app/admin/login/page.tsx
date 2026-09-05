@@ -64,10 +64,12 @@ export default function AdminLoginPage() {
             <KeyRound className="w-3.5 h-3.5" />
             Owner & Agency Admin Portal
           </div>
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-accent-cyan p-0.5 mx-auto shadow-xl shadow-brand-500/20">
-            <div className="w-full h-full bg-[#080B11] rounded-[14px] flex items-center justify-center">
-              <ShieldCheck className="w-7 h-7 text-brand-400" />
-            </div>
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-brand-500/30 mx-auto shadow-xl shadow-brand-500/20 bg-[#080B11]">
+            <img
+              src="/logo.png"
+              alt="Gujju AI Studio Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">Studio Owner Login</h1>
           <p className="text-xs text-gray-400">Exclusive access for Gujju AI Studio Management</p>

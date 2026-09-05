@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: 'Gujju AI Studio | AI Product Ads That Stop the Scroll',
   description: 'High-converting AI product reels for e-commerce, D2C brands, and local businesses in India. Fast 2-day delivery with custom AI voiceovers.',
   keywords: ['AI Reels', 'Product Video Ads', 'Gujju AI Studio', 'Instagram Reels Creation', 'E-commerce Video Ads'],
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({

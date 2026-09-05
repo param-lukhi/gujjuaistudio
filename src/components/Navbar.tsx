@@ -120,10 +120,12 @@ export default function Navbar() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-accent-cyan p-0.5 shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-300">
-                <div className="w-full h-full bg-[#080B11] rounded-[10px] flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-brand-400 group-hover:rotate-12 transition-transform duration-300" />
-                </div>
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-300 border border-brand-500/30 bg-[#080B11] shrink-0">
+                <img
+                  src="/logo.png"
+                  alt="Gujju AI Studio Logo"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center gap-1.5">

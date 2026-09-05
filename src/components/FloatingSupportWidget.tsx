@@ -213,8 +213,12 @@ export default function FloatingSupportWidget() {
             <div className="p-4 bg-gradient-to-r from-brand-600 via-brand-500 to-accent-cyan flex items-center justify-between text-white shrink-0 shadow-lg shadow-brand-600/20">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
-                    <Sparkles className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-2xl overflow-hidden border border-white/20 shadow-md bg-[#080B11] shrink-0">
+                    <img
+                      src="/logo.png"
+                      alt="Gujju AI Studio Logo"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#090D16] animate-pulse" />
                 </div>
