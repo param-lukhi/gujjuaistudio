@@ -237,24 +237,34 @@ export default function FloatingSupportWidget() {
           </div>
         )}
 
-        {/* Buttons Row */}
-        <div className="flex items-center gap-3">
+        {/* Floating Buttons Column (Message button directly ABOVE WhatsApp button) */}
+        <div className="flex flex-col items-center gap-3">
           
-          {/* Quick Message Toggle Button */}
+          {/* Floating Message Action Button (Above WhatsApp) */}
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-surface-100/95 hover:bg-surface-200 text-white font-bold text-xs border border-surface-200/80 shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-brand-600 to-accent-cyan text-white shadow-2xl shadow-brand-500/40 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
             aria-label="Toggle Quick Message Box"
+            title="Send us a message"
           >
-            <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center">
-              <MessageSquare className="w-3.5 h-3.5" />
-            </div>
-            <span className="hidden sm:inline font-semibold">Message Us</span>
-            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse sm:hidden" />
+            {/* Subtle Pulse */}
+            <span className="absolute inset-0 rounded-full bg-brand-500 animate-ping opacity-20 pointer-events-none" />
+
+            {/* Icon */}
+            {isOpen ? (
+              <X className="w-6 h-6 text-white relative z-10 transition-transform duration-200" />
+            ) : (
+              <MessageSquare className="w-6 h-6 text-white relative z-10 transition-transform duration-200" />
+            )}
+
+            {/* Tooltip on hover */}
+            <span className="absolute right-16 px-3 py-1.5 rounded-xl bg-[#0B0F19]/90 border border-surface-200/80 text-white text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+              Send a Message
+            </span>
           </button>
 
-          {/* Floating WhatsApp Action Button */}
+          {/* Floating WhatsApp Action Button (Bottom) */}
           <a
             href={WHATSAPP_URL}
             target="_blank"
@@ -274,6 +284,11 @@ export default function FloatingSupportWidget() {
             {/* Online Green Badge */}
             <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center shadow-md">
               <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+            </span>
+
+            {/* Tooltip on hover */}
+            <span className="absolute right-16 px-3 py-1.5 rounded-xl bg-[#0B0F19]/90 border border-surface-200/80 text-white text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+              Chat on WhatsApp
             </span>
           </a>
 

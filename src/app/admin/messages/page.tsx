@@ -316,10 +316,36 @@ export default function ManageMessagesPage() {
                         </button>
                       </div>
 
-                      {/* Reply button */}
+                      {/* Reply button actions */}
                       <div className="flex items-center gap-2">
+                        {/* WhatsApp Reply Button if phone number is detected in email/contact or message */}
+                        {(() => {
+                          const rawPhone = (msg.email + ' ' + msg.message).replace(/[^0-9]/g, '');
+                          const isPhoneAvailable = rawPhone.length >= 10;
+                          const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone.startsWith('91') ? rawPhone : `91${rawPhone.slice(-10)}`;
+                          
+                          if (isPhoneAvailable) {
+                            return (
+                              <a
+                                href={`https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Hi ${msg.name}, thank you for reaching out to Gujju AI Studio regarding "${msg.subject || 'AI Video Ads'}". How can we assist you?`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => handleUpdateStatus(msg.id, 'REPLIED')}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center gap-1.5 shadow-sm transition-all"
+                                title="Reply directly to user on WhatsApp"
+                              >
+                                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-10.416c-4.417 0-8.002 3.584-8.003 8.001 0 1.41.368 2.784 1.066 3.994l-1.134 4.14 4.239-1.112c1.172.64 2.497.978 3.829.979h.003c4.418 0 8.003-3.585 8.003-8.003 0-4.417-3.585-8-8.003-8z" />
+                                </svg>
+                                WhatsApp Reply
+                              </a>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         <a
-                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || 'Gujju AI Studio Inquiry')}`}
+                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || 'Gujju AI Studio Inquiry')}&body=${encodeURIComponent(`Hi ${msg.name},\n\nThank you for reaching out to Gujju AI Studio.\n\nRegarding your message:\n"${msg.message}"\n\n`)}`}
                           onClick={() => handleUpdateStatus(msg.id, 'REPLIED')}
                           className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white flex items-center gap-1.5 shadow-sm transition-all"
                         >
