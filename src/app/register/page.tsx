@@ -147,25 +147,43 @@ function RegisterForm() {
             formattedPhone = rawDigits.length === 10 ? `+91${rawDigits}` : `+${rawDigits}`;
           }
 
-          // Initialize invisible reCAPTCHA verifier
-          if (!recaptchaVerifierRef.current) {
-            recaptchaVerifierRef.current = new RecaptchaVerifier(fb.auth, 'recaptcha-container', {
-              size: 'invisible',
-            });
+          try {
+            // Initialize invisible reCAPTCHA verifier
+            if (!recaptchaVerifierRef.current) {
+              recaptchaVerifierRef.current = new RecaptchaVerifier(fb.auth, 'recaptcha-container', {
+                size: 'invisible',
+                callback: () => {},
+              });
+            }
+
+            const confirmation = await signInWithPhoneNumber(
+              fb.auth,
+              formattedPhone,
+              recaptchaVerifierRef.current
+            );
+
+            confirmationResultRef.current = confirmation;
+            setStep(2);
+            setCountdown(60);
+            setSuccessMessage(`6-digit SMS OTP sent to your Mobile Number (${formattedPhone}).`);
+          } catch (firebaseErr: any) {
+            console.error('Firebase Phone Auth error:', firebaseErr);
+            recaptchaVerifierRef.current = null;
+
+            if (firebaseErr.code === 'auth/invalid-phone-number') {
+              setErrorMessage('Invalid phone number format. Please enter a valid number with country code (e.g. +91 98765 43210).');
+            } else if (firebaseErr.code === 'auth/too-many-requests') {
+              setErrorMessage('Too many SMS requests sent. Please wait a few minutes before trying again.');
+            } else if (firebaseErr.code === 'auth/unauthorized-domain') {
+              setErrorMessage('Please add gujjuaistudio.vercel.app to Firebase Console -> Authentication -> Settings -> Authorized Domains.');
+            } else {
+              setErrorMessage(firebaseErr.message || 'Failed to send SMS OTP. Please check your connection.');
+            }
+            setSendingOtp(false);
+            return;
           }
-
-          const confirmation = await signInWithPhoneNumber(
-            fb.auth,
-            formattedPhone,
-            recaptchaVerifierRef.current
-          );
-
-          confirmationResultRef.current = confirmation;
-          setStep(2);
-          setCountdown(60);
-          setSuccessMessage(`6-digit SMS OTP sent to your Mobile Number (${formattedPhone}).`);
         } else {
-          // Fallback to server SMS dispatch if Firebase keys are not in frontend env
+          // Fallback to server SMS dispatch if Firebase is unavailable
           const res = await fetch('/api/auth/send-register-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
