@@ -19,7 +19,6 @@ import {
   RotateCcw,
   KeyRound,
   Check,
-  Info,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -47,7 +46,6 @@ function RegisterForm() {
   });
 
   const [otp, setOtp] = useState('');
-  const [demoOtpNotice, setDemoOtpNotice] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -74,7 +72,6 @@ function RegisterForm() {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
-    setDemoOtpNotice(null);
 
     if (!formData.name.trim()) {
       setErrorMessage('Please enter your full name.');
@@ -130,13 +127,10 @@ function RegisterForm() {
       } else {
         setStep(2);
         setCountdown(60);
-        if (data.demoOtp) {
-          setDemoOtpNotice(data.demoOtp);
-        }
         setSuccessMessage(
           authMethod === 'mobile'
-            ? `6-digit OTP sent to Mobile Number (${formData.phoneNumber}).`
-            : `6-digit OTP sent to Email (${formData.email}).`
+            ? `6-digit OTP sent to your Mobile Number (${formData.phoneNumber}).`
+            : `6-digit OTP sent to your Email (${formData.email}).`
         );
       }
     } catch (err: any) {
@@ -171,9 +165,6 @@ function RegisterForm() {
         setErrorMessage(data.error || 'Failed to resend OTP.');
       } else {
         setCountdown(60);
-        if (data.demoOtp) {
-          setDemoOtpNotice(data.demoOtp);
-        }
         setSuccessMessage(
           authMethod === 'mobile'
             ? `New 6-digit OTP sent to ${formData.phoneNumber}!`
@@ -530,23 +521,6 @@ function RegisterForm() {
               </p>
             </div>
 
-            {/* If SMS demo code is provided in local/dev */}
-            {demoOtpNotice && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 shrink-0" />
-                  <span>SMS Test Code: <strong className="tracking-widest font-mono text-sm">{demoOtpNotice}</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtp(demoOtpNotice)}
-                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 rounded text-[11px] font-bold text-amber-200 transition-all"
-                >
-                  Auto-fill
-                </button>
-              </div>
-            )}
-
             <div className="space-y-2">
               <input
                 type="text"
@@ -555,7 +529,7 @@ function RegisterForm() {
                 required
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
+                placeholder="Enter 6-digit OTP"
                 className="w-full bg-surface-100 border-2 border-brand-500 focus:ring-2 focus:ring-brand-500/40 rounded-2xl py-3.5 text-center text-2xl tracking-[12px] font-mono font-bold text-white placeholder-gray-600 outline-none transition-all shadow-inner"
               />
 

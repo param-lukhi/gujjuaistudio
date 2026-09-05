@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         ? `register_mobile:${cleanPhone}`
         : `register_email:${cleanEmail}`;
 
-    // Clean up existing tokens
+    // Clean up existing tokens for this identifier
     try {
       await prisma.verificationToken.deleteMany({
         where: { identifier },
@@ -69,19 +69,9 @@ export async function POST(req: Request) {
       // ignore
     }
 
-    // Store new token
-    await prisma.verificationToken.create({
-      data: {
-        identifier,
-        token: otp,
-        expires,
-      },
-    });
-
-    let smsResult = null;
-
+    // Dispatch OTP based on selected channel
     if (type === 'email') {
-      // Send Email OTP
+      // Send Email OTP via Gmail SMTP
       await sendEmail({
         to: cleanEmail,
         subject: `${otp} is your Gujju AI Studio Registration OTP 🔐`,
@@ -105,12 +95,32 @@ export async function POST(req: Request) {
         `,
       });
     } else {
-      // Send Mobile SMS OTP
-      smsResult = await sendSmsOtp({
+      // Send Real Mobile SMS OTP
+      const smsResult = await sendSmsOtp({
         phoneNumber: cleanPhone,
         otp,
       });
+
+      if (!smsResult.success) {
+        return NextResponse.json(
+          {
+            error:
+              smsResult.message ||
+              'Mobile SMS service is currently unavailable. Please register using Email OTP.',
+          },
+          { status: 400 }
+        );
+      }
     }
+
+    // Store new token in DB only after successful dispatch
+    await prisma.verificationToken.create({
+      data: {
+        identifier,
+        token: otp,
+        expires,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -119,8 +129,6 @@ export async function POST(req: Request) {
           ? `6-digit OTP code sent to your mobile number ${cleanPhone}.`
           : `6-digit OTP code sent to your email address ${cleanEmail}.`,
       type,
-      // If SMS gateway is not yet linked in .env, supply simulated demo code so user can test without obstacles
-      demoOtp: smsResult?.simulated ? otp : undefined,
     });
   } catch (error: any) {
     console.error('Send Register OTP Error:', error);

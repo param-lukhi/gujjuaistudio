@@ -1,5 +1,5 @@
 // SMS Dispatch Utility for Indian & International Phone Numbers
-// Supports Fast2SMS, Twilio, 2Factor, and Dev Fallback
+// Supports Fast2SMS (Indian SMS Gateway) & Twilio (Global SMS Gateway)
 
 export async function sendSmsOtp({
   phoneNumber,
@@ -7,7 +7,7 @@ export async function sendSmsOtp({
 }: {
   phoneNumber: string;
   otp: string;
-}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+}): Promise<{ success: boolean; message?: string }> {
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
   // Extract 10-digit Indian phone number if prefixed with 91 or 0
   const tenDigit =
@@ -30,11 +30,16 @@ export async function sendSmsOtp({
       });
       const data = await response.json();
       if (data.return) {
-        return { success: true, simulated: false };
+        return { success: true };
       }
-      console.warn('Fast2SMS failed response:', data);
-    } catch (error) {
+      console.error('Fast2SMS failed response:', data);
+      return {
+        success: false,
+        message: data.message?.[0] || 'Fast2SMS failed to deliver SMS.',
+      };
+    } catch (error: any) {
       console.error('Fast2SMS dispatch error:', error);
+      return { success: false, message: 'SMS gateway connection error.' };
     }
   }
 
@@ -69,25 +74,28 @@ export async function sendSmsOtp({
       });
 
       if (response.ok) {
-        return { success: true, simulated: false };
+        return { success: true };
       }
+      const errData = await response.json();
+      console.error('Twilio dispatch error response:', errData);
+      return {
+        success: false,
+        message: errData.message || 'Twilio failed to send SMS.',
+      };
     } catch (error) {
       console.error('Twilio dispatch error:', error);
+      return { success: false, message: 'Twilio SMS service error.' };
     }
   }
 
-  // 3. Development / Demo Fallback Mode (When no paid SMS API is configured)
-  console.log('=====================================================');
-  console.log(`[SMS OTP DISPATCH] Phone: ${phoneNumber}`);
-  console.log(`[SMS OTP DISPATCH] OTP: ${otp}`);
-  console.log(
-    `[SMS OTP DISPATCH] Message: Your Gujju AI Studio OTP is ${otp}. Valid for 10 minutes.`
+  // If no SMS gateway is configured in environment variables:
+  console.warn(
+    `[SMS NOTICE] SMS Gateway API key (FAST2SMS_API_KEY or TWILIO_ACCOUNT_SID) is not configured in .env. SMS cannot be sent to ${phoneNumber}.`
   );
-  console.log('=====================================================');
 
   return {
-    success: true,
-    simulated: true,
-    message: `SMS sent! Demo OTP code: ${otp}`,
+    success: false,
+    message:
+      'SMS Gateway is not yet configured. Please verify using Email OTP or add FAST2SMS_API_KEY / Twilio credentials in your Vercel Environment Variables.',
   };
 }
