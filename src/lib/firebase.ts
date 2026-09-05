@@ -9,7 +9,7 @@ const clean = (val: string | undefined, fallback: string) => {
 const firebaseConfig = {
   apiKey: clean(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    'AIzaSyDXG1GY4sorC245fUkAGIcHzrs8BsqGEmk'
+    'AIzaSyDXG1GY4sorC245fUkAGiCHjrs8BsqGEmk'
   ),
   authDomain: clean(
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
