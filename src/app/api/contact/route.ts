@@ -1,8 +1,27 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const email = searchParams.get('email');
+
+    if (id) {
+      const msg = await prisma.contactMessage.findUnique({
+        where: { id },
+      });
+      return NextResponse.json(msg);
+    }
+
+    if (email) {
+      const messages = await prisma.contactMessage.findMany({
+        where: { email },
+        orderBy: { createdAt: 'desc' },
+      });
+      return NextResponse.json(messages);
+    }
+
     const messages = await prisma.contactMessage.findMany({
       orderBy: { createdAt: 'desc' },
     });

@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { MessageSquare, X, Send, CheckCircle2, Sparkles, User, Mail } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  MessageSquare, X, Send, CheckCircle2, Sparkles, 
+  User, Mail, Phone, CheckCheck, Loader2, RefreshCw, MessageCircle
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 const WHATSAPP_NUMBER = '919925263558';
 const WHATSAPP_PREFILLED_MESSAGE = encodeURIComponent(
@@ -9,235 +13,410 @@ const WHATSAPP_PREFILLED_MESSAGE = encodeURIComponent(
 );
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PREFILLED_MESSAGE}`;
 
-export default function FloatingSupportWidget() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: 'AI Video Ads Inquiry',
-    message: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState('');
+interface ChatBubble {
+  id: string;
+  sender: 'USER' | 'ADMIN' | 'BOT';
+  senderName?: string;
+  text: string;
+  subject?: string;
+  createdAt: string;
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+export default function FloatingSupportWidget() {
+  const { data: session } = useSession();
+  const [isOpen, setIsOpen] = useState(false);
+  const [showUserInfoPrompt, setShowUserInfoPrompt] = useState(false);
+
+  // User details state
+  const [userName, setUserName] = useState('');
+  const [userContact, setUserContact] = useState(''); // Email or Phone
+  const [inquiryTopic, setInquiryTopic] = useState('AI Video Ads Inquiry');
+  
+  // Message input
+  const [inputMessage, setInputMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  // Current active message thread ID
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+
+  // Chat bubbles list
+  const [chatBubbles, setChatBubbles] = useState<ChatBubble[]>([
+    {
+      id: 'welcome-bot-msg',
+      sender: 'BOT',
+      senderName: 'Gujju AI Studio Support',
+      text: 'Hi there! 👋 Welcome to Gujju AI Studio. How can we help you create viral AI product reels or scale your brand today?',
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Load user data from session or localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('gujju_client_name') || session?.user?.name || '';
+      const savedContact = localStorage.getItem('gujju_client_contact') || session?.user?.email || '';
+      const savedMsgId = localStorage.getItem('gujju_client_active_msg_id');
+      
+      if (savedName) setUserName(savedName);
+      if (savedContact) setUserContact(savedContact);
+      if (savedMsgId) setActiveMessageId(savedMsgId);
+
+      const savedChat = localStorage.getItem('gujju_client_chat_history');
+      if (savedChat) {
+        try {
+          const parsed = JSON.parse(savedChat);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setChatBubbles(parsed);
+          }
+        } catch {}
+      }
+    }
+  }, [session]);
+
+  // Scroll to bottom whenever chat bubbles change or modal opens
+  useEffect(() => {
+    if (isOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isOpen, chatBubbles]);
+
+  // Poll for admin replies if activeMessageId exists
+  useEffect(() => {
+    if (!isOpen || !activeMessageId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/contact?id=${activeMessageId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.replies) {
+            const adminReplies: any[] = JSON.parse(data.replies);
+            if (Array.isArray(adminReplies) && adminReplies.length > 0) {
+              setChatBubbles((prev) => {
+                const existingAdminReplyIds = new Set(prev.filter((b) => b.sender === 'ADMIN').map((b) => b.id));
+                const newBubbles = [...prev];
+                let hasNew = false;
+
+                adminReplies.forEach((rep) => {
+                  if (!existingAdminReplyIds.has(rep.id)) {
+                    hasNew = true;
+                    newBubbles.push({
+                      id: rep.id,
+                      sender: 'ADMIN',
+                      senderName: rep.senderName || 'Gujju AI Studio Support',
+                      text: rep.text,
+                      createdAt: rep.createdAt,
+                    });
+                  }
+                });
+
+                if (hasNew) {
+                  localStorage.setItem('gujju_client_chat_history', JSON.stringify(newBubbles));
+                  return newBubbles;
+                }
+                return prev;
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [isOpen, activeMessageId]);
+
+  // Handle Quick Chip click
+  const handleQuickChip = (text: string) => {
+    setInputMessage(text);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      setError('Please fill in all required fields.');
+  // Submit user message in live chat
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!inputMessage.trim()) return;
+
+    // If user info is not present, prompt for info first
+    if (!userName.trim() || !userContact.trim()) {
+      setShowUserInfoPrompt(true);
       return;
     }
 
-    setSubmitting(true);
-    setError('');
+    const currentText = inputMessage.trim();
+    setInputMessage('');
+    setSending(true);
+
+    const newBubble: ChatBubble = {
+      id: `user-${Date.now()}`,
+      sender: 'USER',
+      senderName: userName,
+      text: currentText,
+      subject: inquiryTopic,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedBubbles = [...chatBubbles, newBubble];
+    setChatBubbles(updatedBubbles);
+    localStorage.setItem('gujju_client_chat_history', JSON.stringify(updatedBubbles));
+    localStorage.setItem('gujju_client_name', userName);
+    localStorage.setItem('gujju_client_contact', userContact);
 
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: userName,
+          email: userContact,
+          subject: inquiryTopic,
+          message: currentText,
+        }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to send message.');
+      const data = await res.json();
+      if (res.ok && data.message?.id) {
+        setActiveMessageId(data.message.id);
+        localStorage.setItem('gujju_client_active_msg_id', data.message.id);
       }
-
-      setSubmitted(true);
-      setFormData({
-        name: '',
-        email: '',
-        subject: 'AI Video Ads Inquiry',
-        message: '',
-      });
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.');
+    } catch (err) {
+      console.error('Failed to submit message:', err);
     } finally {
-      setSubmitting(false);
+      setSending(false);
+    }
+  };
+
+  const handleSaveUserInfo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (userName.trim() && userContact.trim()) {
+      setShowUserInfoPrompt(false);
+      localStorage.setItem('gujju_client_name', userName);
+      localStorage.setItem('gujju_client_contact', userContact);
+      if (inputMessage.trim()) {
+        handleSendMessage();
+      }
     }
   };
 
   return (
     <>
-      {/* Floating Action Buttons Container (Bottom-Right) */}
+      {/* Floating Container (Bottom-Right) */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">
         
-        {/* Quick Message Popup Card */}
+        {/* 💬 LIVE WHATSAPP & INSTAGRAM STYLE CHAT MESSENGER WINDOW */}
         {isOpen && (
-          <div className="w-[90vw] sm:w-[380px] rounded-3xl bg-[#0B0F19]/95 backdrop-blur-xl border border-surface-200/80 shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 mb-2">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-500 to-accent-cyan p-4 sm:p-5 flex items-center justify-between text-white">
+          <div className="w-[92vw] sm:w-[400px] h-[550px] max-h-[80vh] rounded-3xl bg-[#090D16]/95 backdrop-blur-2xl border border-surface-200/80 shadow-2xl shadow-black/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 mb-2">
+            
+            {/* 1. Chat Header */}
+            <div className="p-4 bg-gradient-to-r from-brand-600 via-brand-500 to-accent-cyan flex items-center justify-between text-white shrink-0 shadow-lg shadow-brand-600/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <Sparkles className="w-5 h-5 text-white" />
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#090D16] animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm sm:text-base leading-tight">Gujju AI Studio</h3>
+                  <h3 className="font-extrabold text-sm leading-tight">Gujju AI Studio</h3>
                   <p className="text-[11px] text-white/80 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     Online • Typically replies in 15 mins
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors"
-                aria-label="Close message popup"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Direct WhatsApp Chat Action */}
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-1 text-xs font-bold"
+                  title="Chat directly on WhatsApp (+91 99252 63558)"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-10.416c-4.417 0-8.002 3.584-8.003 8.001 0 1.41.368 2.784 1.066 3.994l-1.134 4.14 4.239-1.112c1.172.64 2.497.978 3.829.979h.003c4.418 0 8.003-3.585 8.003-8.003 0-4.417-3.585-8-8.003-8z" />
+                  </svg>
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </a>
+
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors"
+                  aria-label="Close Chat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Content Body */}
-            <div className="p-5 max-h-[75vh] overflow-y-auto space-y-4">
-              {/* WhatsApp Quick Action Banner */}
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#25D366] text-white flex items-center justify-center shadow-md shadow-[#25D366]/30">
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-10.416c-4.417 0-8.002 3.584-8.003 8.001 0 1.41.368 2.784 1.066 3.994l-1.134 4.14 4.239-1.112c1.172.64 2.497.978 3.829.979h.003c4.418 0 8.003-3.585 8.003-8.003 0-4.417-3.585-8-8.003-8z" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-white group-hover:text-[#25D366] transition-colors">Instant WhatsApp Chat</p>
-                    <p className="text-[11px] text-gray-400">+91 99252 63558</p>
-                  </div>
-                </div>
-                <span className="text-xs font-bold px-2 py-1 rounded-lg bg-[#25D366]/20 text-[#25D366]">Chat →</span>
-              </a>
-
-              {/* Message Form Header */}
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-surface-200/60" />
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold text-gray-400">
-                  <span className="bg-[#0B0F19] px-2">Or Send Studio Message</span>
-                </div>
+            {/* 2. Interactive Chat Feed (WhatsApp & Instagram DM Style) */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#070A11] bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
+              
+              {/* Date Header */}
+              <div className="flex justify-center">
+                <span className="px-3 py-1 rounded-full bg-surface-100/90 border border-surface-200/60 text-[10px] text-gray-400 font-mono shadow-sm">
+                  Live Studio Messenger
+                </span>
               </div>
 
-              {submitted ? (
-                <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h4 className="font-bold text-white text-base">Message Sent Successfully!</h4>
-                  <p className="text-xs text-gray-300">
-                    Thank you! Our AI team will review your inquiry and get back to you shortly.
-                  </p>
-                  <button
-                    onClick={() => setSubmitted(false)}
-                    className="px-4 py-2 rounded-xl bg-surface-100 hover:bg-surface-200 text-xs font-bold text-white border border-surface-200 transition-colors"
+              {/* Chat Bubbles */}
+              {chatBubbles.map((bubble) => {
+                const isUser = bubble.sender === 'USER';
+
+                return (
+                  <div
+                    key={bubble.id}
+                    className={`flex flex-col ${isUser ? 'items-end ml-auto' : 'items-start mr-auto'} max-w-[85%] space-y-1 animate-in fade-in`}
                   >
-                    Send Another Message
+                    {/* Message Bubble */}
+                    <div
+                      className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-md ${
+                        isUser
+                          ? 'bg-gradient-to-tr from-brand-600 to-brand-500 text-white rounded-tr-sm shadow-brand-500/20'
+                          : 'bg-[#182234] border border-[#27354f] text-gray-100 rounded-tl-sm'
+                      }`}
+                    >
+                      {!isUser && (
+                        <div className="text-[10px] font-extrabold text-accent-cyan uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <Sparkles className="w-3 h-3" />
+                          {bubble.senderName || 'Gujju AI Studio Support'}
+                        </div>
+                      )}
+                      
+                      {isUser && bubble.subject && (
+                        <div className="text-[10px] font-bold text-white/80 mb-1">
+                          {bubble.subject}
+                        </div>
+                      )}
+
+                      <p>{bubble.text}</p>
+                    </div>
+
+                    {/* Timestamp & Status */}
+                    <div className={`flex items-center gap-1 text-[10px] text-gray-500 ${isUser ? 'pr-1' : 'pl-1'}`}>
+                      <span>
+                        {new Date(bubble.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {isUser && (
+                        <span className="text-emerald-400 font-bold flex items-center">
+                          <CheckCheck className="w-3 h-3 ml-0.5" />
+                          Sent
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* User Info Capture Modal/Drawer (if user hasn't provided name/email) */}
+            {showUserInfoPrompt && (
+              <div className="p-4 bg-surface-100 border-t border-surface-200 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-brand-400" />
+                    Enter your name & email to send
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowUserInfoPrompt(false)}
+                    className="text-gray-400 hover:text-white text-xs"
+                  >
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  {error && (
-                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                      {error}
-                    </div>
-                  )}
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
-                      Your Name <span className="text-brand-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        name="name"
-                        required
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="Enter your name"
-                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-100/90 border border-surface-200 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-500 transition-all"
-                      />
-                    </div>
-                  </div>
+                <form onSubmit={handleSaveUserInfo} className="space-y-2.5">
+                  <input
+                    type="text"
+                    required
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Your Full Name"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={userContact}
+                    onChange={(e) => setUserContact(e.target.value)}
+                    placeholder="Email Address or WhatsApp Number"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="submit"
+                    className="btn-glow w-full py-2 rounded-xl text-xs font-bold text-white shadow-md"
+                  >
+                    Continue to Chat →
+                  </button>
+                </form>
+              </div>
+            )}
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
-                      Email or Mobile Phone <span className="text-brand-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        name="email"
-                        required
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="Enter your email or phone"
-                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-100/90 border border-surface-200 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-500 transition-all"
-                      />
-                    </div>
-                  </div>
+            {/* 3. Quick Action Chips */}
+            {!showUserInfoPrompt && (
+              <div className="px-3.5 py-2 bg-[#090D16] border-t border-surface-200/50 flex items-center gap-2 overflow-x-auto text-[11px] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleQuickChip('I want to create AI video ads for my brand. What is the pricing?')}
+                  className="px-2.5 py-1 rounded-lg bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-300 hover:text-white shrink-0 transition-colors"
+                >
+                  🚀 AI Video Pricing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickChip('How does the 2-day delivery process work?')}
+                  className="px-2.5 py-1 rounded-lg bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-300 hover:text-white shrink-0 transition-colors"
+                >
+                  ⚡ 2-Day Delivery
+                </button>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-[#25D366]/20 hover:bg-[#25D366]/30 border border-[#25D366]/40 text-[#25D366] shrink-0 transition-colors font-bold"
+                >
+                  💬 WhatsApp
+                </a>
+              </div>
+            )}
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
-                      Inquiry Topic
-                    </label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl bg-surface-100/90 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 transition-all"
-                    >
-                      <option value="AI Video Ads Inquiry">AI Video Ads Inquiry</option>
-                      <option value="Bulk Reels Package">Bulk Reels Package</option>
-                      <option value="Custom Brand Retainer">Custom Brand Retainer</option>
-                      <option value="Support & Revision">Support & Revision</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
-                      Message <span className="text-brand-400">*</span>
-                    </label>
-                    <textarea
-                      name="message"
-                      required
-                      rows={3}
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="Tell us about your product or requirements..."
-                      className="w-full p-2.5 rounded-xl bg-surface-100/90 border border-surface-200 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-500 transition-all resize-none"
-                    />
-                  </div>
+            {/* 4. Bottom Chat Input Bar */}
+            {!showUserInfoPrompt && (
+              <div className="p-3 bg-surface-100/90 border-t border-surface-200/70 shrink-0">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder={userName ? `Message as ${userName}...` : 'Type your message...'}
+                    className="w-full bg-[#080B11] border border-surface-200 focus:border-brand-500 rounded-2xl py-2.5 px-3.5 text-xs text-white placeholder-gray-500 outline-none"
+                  />
 
                   <button
                     type="submit"
-                    disabled={submitting}
-                    className="btn-glow w-full py-2.5 rounded-xl font-bold text-white text-xs flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 disabled:opacity-50"
+                    disabled={sending || !inputMessage.trim()}
+                    className="btn-glow p-2.5 rounded-2xl font-bold text-white text-xs flex items-center justify-center shadow-lg shadow-brand-500/25 disabled:opacity-50 shrink-0"
+                    aria-label="Send message"
                   >
-                    {submitting ? (
-                      <span>Sending Message...</span>
+                    {sending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <>
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Send Message to Team</span>
-                      </>
+                      <Send className="w-4 h-4" />
                     )}
                   </button>
                 </form>
-              )}
-            </div>
+              </div>
+            )}
+
           </div>
         )}
 
-        {/* Floating Buttons Column (Message button directly ABOVE WhatsApp button) */}
+        {/* Floating Action Buttons Column (Bottom-Right) */}
         <div className="flex flex-col items-center gap-3">
           
           {/* Floating Message Action Button (Above WhatsApp) */}
@@ -260,7 +439,7 @@ export default function FloatingSupportWidget() {
 
             {/* Tooltip on hover */}
             <span className="absolute right-16 px-3 py-1.5 rounded-xl bg-[#0B0F19]/90 border border-surface-200/80 text-white text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
-              Send a Message
+              Live Chat & Message
             </span>
           </button>
 
