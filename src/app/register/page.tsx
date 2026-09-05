@@ -389,49 +389,10 @@ function RegisterForm() {
           </h1>
           <p className="text-xs sm:text-sm text-gray-400">
             {step === 1
-              ? `Register with ${authMethod === 'email' ? 'Email OTP' : 'Mobile Number OTP'} verification.`
-              : `Enter the 6-digit OTP sent to your ${authMethod === 'mobile' ? 'Mobile Number' : 'Email Address'}.`}
+              ? 'Enter your details to receive an Email OTP verification code.'
+              : `Enter the 6-digit OTP sent to your Email (${formData.email}).`}
           </p>
         </div>
-
-        {/* Step 1 Progress Indicator & Method Switcher */}
-        {step === 1 && (
-          <div className="space-y-4">
-            {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-2 p-1 bg-surface-100/90 rounded-2xl border border-surface-200/80">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMethod('email');
-                  setErrorMessage('');
-                }}
-                className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  authMethod === 'email'
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                Email OTP
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMethod('mobile');
-                  setErrorMessage('');
-                }}
-                className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  authMethod === 'mobile'
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                Mobile OTP
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Alerts / Notifications */}
         {successMessage && (
@@ -485,7 +446,7 @@ function RegisterForm() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-[#0c1017] px-3 text-gray-500 font-medium">
-                  Or register with {authMethod === 'email' ? 'Email' : 'Mobile Number'}
+                  Or register with Email
                 </span>
               </div>
             </div>
@@ -624,7 +585,7 @@ function RegisterForm() {
                   </span>
                 ) : (
                   <>
-                    Send 6-Digit OTP to {authMethod === 'email' ? 'Email' : 'Mobile Number'}
+                    Send 6-Digit OTP to Email Address
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
