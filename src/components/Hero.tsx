@@ -1,14 +1,58 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Sparkles, Play, ArrowRight, ShieldCheck, Zap, Award, Star } from 'lucide-react';
 import { useAuthModal } from './providers/AuthModalContext';
 
-export default function Hero() {
+interface HeroShowcaseData {
+  badgeText: string;
+  durationText: string;
+  category: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  buttonText: string;
+  buttonLink: string;
+  floatingBadge1Title: string;
+  floatingBadge1Sub: string;
+  floatingBadge2Title: string;
+  floatingBadge2Sub: string;
+}
+
+const DEFAULT_HERO: HeroShowcaseData = {
+  badgeText: 'AI Reel Demo',
+  durationText: '00:30',
+  category: 'Fashion & Luxury',
+  title: 'Luxury Silk Saree AI Showcase',
+  description: 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.',
+  videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
+  buttonText: 'View All 7 Categories',
+  buttonLink: '/portfolio',
+  floatingBadge1Title: 'Commercial Rights',
+  floatingBadge1Sub: '100% Monetization',
+  floatingBadge2Title: 'AI Voiceover',
+  floatingBadge2Sub: 'Hindi & English',
+};
+
+export default function Hero({ initialData }: { initialData?: HeroShowcaseData }) {
   const { data: session } = useSession();
   const { requireAuth } = useAuthModal();
+  const [heroData, setHeroData] = useState<HeroShowcaseData>(initialData || DEFAULT_HERO);
+
+  useEffect(() => {
+    // Fetch live hero showcase data
+    fetch('/api/admin/hero')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.title) {
+          setHeroData(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleProtectedBookClick = (e: React.MouseEvent) => {
     if (!session?.user) {
@@ -108,73 +152,85 @@ export default function Hero() {
 
           </div>
 
-          {/* Right Column: Hero Video Teaser Showcase Card */}
+          {/* Right Column: Hero Video Teaser Showcase Card (Dynamic from Database) */}
           <div className="lg:col-span-5 relative flex justify-center">
             
             <div className="relative w-full max-w-[340px] sm:max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden glass-panel border border-brand-500/40 p-2.5 shadow-2xl shadow-brand-500/20 glow-box-blue group">
               
               {/* Inner Frame */}
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black">
-                <video
-                  src="https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
+                {heroData.videoUrl && (
+                  <video
+                    key={heroData.videoUrl}
+                    src={heroData.videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                )}
 
                 {/* Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30 flex flex-col justify-between p-5">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/35 flex flex-col justify-between p-5">
                   <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-600/80 backdrop-blur-md text-white border border-brand-400/40 flex items-center gap-1.5">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-600/85 backdrop-blur-md text-white border border-brand-400/40 flex items-center gap-1.5 shadow-md">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      AI Reel Demo
+                      {heroData.badgeText || 'AI Reel Demo'}
                     </span>
                     <span className="text-xs font-mono text-gray-300 bg-black/60 px-2.5 py-1 rounded-md border border-white/10">
-                      00:30
+                      {heroData.durationText || '00:30'}
                     </span>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-accent-violet/80 text-white">
-                      Fashion & Luxury
+                    <div className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-accent-violet/85 text-white shadow-sm">
+                      {heroData.category || 'Fashion & Luxury'}
                     </div>
                     <h3 className="text-lg font-bold text-white drop-shadow">
-                      Luxury Silk Saree AI Showcase
+                      {heroData.title || 'Luxury Silk Saree AI Showcase'}
                     </h3>
-                    <p className="text-xs text-gray-300 line-clamp-2">
-                      Generated purely from 2 flat product photos. Complete with AI lighting & model animation.
+                    <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
+                      {heroData.description || 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.'}
                     </p>
                     <Link
-                      href="/portfolio"
+                      href={heroData.buttonLink || '/portfolio'}
                       className="mt-2 w-full py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all"
                     >
                       <Play className="w-3.5 h-3.5 fill-white" />
-                      View All 7 Categories
+                      {heroData.buttonText || 'View All 7 Categories'}
                     </Link>
                   </div>
                 </div>
               </div>
 
-              {/* Floating Floating Badges */}
+              {/* Floating Badge 1 (Top-Left) */}
               <div className="absolute -top-4 -left-4 glass-panel p-3 rounded-xl border-brand-400/40 flex items-center gap-2.5 shadow-xl animate-float">
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
                   ✓
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">Commercial Rights</div>
-                  <div className="text-[10px] text-gray-400">100% Monetization</div>
+                  <div className="text-xs font-bold text-white">
+                    {heroData.floatingBadge1Title || 'Commercial Rights'}
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {heroData.floatingBadge1Sub || '100% Monetization'}
+                  </div>
                 </div>
               </div>
 
+              {/* Floating Badge 2 (Bottom-Right) */}
               <div className="absolute -bottom-4 -right-4 glass-panel p-3 rounded-xl border-brand-400/40 flex items-center gap-2.5 shadow-xl animate-float" style={{ animationDelay: '2s' }}>
                 <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">AI Voiceover</div>
-                  <div className="text-[10px] text-gray-400">Hindi & English</div>
+                  <div className="text-xs font-bold text-white">
+                    {heroData.floatingBadge2Title || 'AI Voiceover'}
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {heroData.floatingBadge2Sub || 'Hindi & English'}
+                  </div>
                 </div>
               </div>
 

@@ -26,6 +26,7 @@ export default function AdminSidebar() {
 
   const menuItems = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Hero Reel Showcase', href: '/admin/hero', icon: Sparkles },
     { name: 'User Management', href: '/admin/users', icon: Users },
     { name: 'Manage Bookings', href: '/admin/bookings', icon: ShoppingBag },
     { name: 'Manage Portfolio', href: '/admin/portfolio', icon: Film },

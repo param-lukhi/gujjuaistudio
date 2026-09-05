@@ -287,3 +287,23 @@ model Review {
   featured    Boolean  @default(true)
   createdAt   DateTime @default(now())
 }
+
+model HeroShowcase {
+  id                  String   @id @default("hero-main")
+  badgeText           String   @default("AI Reel Demo")
+  durationText        String   @default("00:30")
+  category            String   @default("Fashion & Luxury")
+  title               String   @default("Luxury Silk Saree AI Showcase")
+  description         String   @default("Generated purely from 2 flat product photos. Complete with AI lighting & model animation.")
+  videoUrl            String   @default("https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4")
+  thumbnailUrl        String?
+  buttonText          String   @default("View All 7 Categories")
+  buttonLink          String   @default("/portfolio")
+  floatingBadge1Title String   @default("Commercial Rights")
+  floatingBadge1Sub   String   @default("100% Monetization")
+  floatingBadge2Title String   @default("AI Voiceover")
+  floatingBadge2Sub   String   @default("Hindi & English")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+}
+
