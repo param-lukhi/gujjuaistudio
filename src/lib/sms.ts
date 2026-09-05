@@ -1,5 +1,5 @@
 // SMS Dispatch Utility for Indian & International Phone Numbers
-// Supports Fast2SMS (Indian SMS Gateway) & Twilio (Global SMS Gateway)
+// Supports: Fast2SMS, 2Factor.in, and Twilio
 
 export async function sendSmsOtp({
   phoneNumber,
@@ -43,7 +43,27 @@ export async function sendSmsOtp({
     }
   }
 
-  // 2. Twilio Integration (if TWILIO credentials configured in .env)
+  // 2. 2Factor.in Integration (if TWOFACTOR_API_KEY is configured in .env)
+  if (process.env.TWOFACTOR_API_KEY) {
+    try {
+      const apiKey = process.env.TWOFACTOR_API_KEY;
+      const url = `https://2factor.in/API/V1/${apiKey}/SMS/${tenDigit}/${otp}/GujjuAI`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.Status === 'Success') {
+        return { success: true };
+      }
+      return {
+        success: false,
+        message: data.Details || '2Factor failed to deliver OTP.',
+      };
+    } catch (error) {
+      console.error('2Factor dispatch error:', error);
+      return { success: false, message: '2Factor SMS service error.' };
+    }
+  }
+
+  // 3. Twilio Integration (if TWILIO credentials configured in .env)
   if (
     process.env.TWILIO_ACCOUNT_SID &&
     process.env.TWILIO_AUTH_TOKEN &&
@@ -90,12 +110,12 @@ export async function sendSmsOtp({
 
   // If no SMS gateway is configured in environment variables:
   console.warn(
-    `[SMS NOTICE] SMS Gateway API key (FAST2SMS_API_KEY or TWILIO_ACCOUNT_SID) is not configured in .env. SMS cannot be sent to ${phoneNumber}.`
+    `[SMS NOTICE] No SMS Gateway API key (FAST2SMS_API_KEY, TWOFACTOR_API_KEY, or TWILIO_ACCOUNT_SID) found in .env.`
   );
 
   return {
     success: false,
     message:
-      'SMS Gateway is not yet configured. Please verify using Email OTP or add FAST2SMS_API_KEY / Twilio credentials in your Vercel Environment Variables.',
+      'SMS Gateway is not yet configured. Please verify using Email OTP or add FAST2SMS_API_KEY in your Vercel Environment Variables.',
   };
 }
