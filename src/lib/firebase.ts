@@ -6,11 +6,17 @@ const clean = (val: string | undefined, fallback: string) => {
   return val.replace(/^["']|["']$/g, '').trim();
 };
 
+const getValidApiKey = (envVal: string | undefined) => {
+  const cleaned = clean(envVal, 'AIzaSyDXG1GY4sorC245fUkAGiCHjrs8BsqGEmk');
+  // Guard against old stale typo in Vercel environment variable
+  if (cleaned.includes('AGIcHz') || cleaned.length < 30) {
+    return 'AIzaSyDXG1GY4sorC245fUkAGiCHjrs8BsqGEmk';
+  }
+  return cleaned;
+};
+
 const firebaseConfig = {
-  apiKey: clean(
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    'AIzaSyDXG1GY4sorC245fUkAGiCHjrs8BsqGEmk'
-  ),
+  apiKey: getValidApiKey(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
   authDomain: clean(
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     'gujjuaistudio-d3377.firebaseapp.com'
