@@ -7,8 +7,8 @@ import { signIn, getSession, signOut } from 'next-auth/react';
 import { Sparkles, ShieldCheck, Lock, ArrowRight, AlertCircle, KeyRound } from 'lucide-react';
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('admin@gujjuai.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-300">Owner / Admin Email</label>
             <input
@@ -91,6 +91,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter owner or admin email address"
+              autoComplete="email"
               className="w-full px-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
             />
           </div>
@@ -103,6 +104,7 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter admin password"
+              autoComplete="current-password"
               className="w-full px-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
             />
           </div>
@@ -122,10 +124,6 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
-
-        <div className="p-3 rounded-xl bg-surface-100/40 border border-surface-200/60 text-[11px] text-gray-400 text-center">
-          🔑 Owner Admin Credentials: <span className="font-mono text-brand-400 font-bold">admin@gujjuai.com / admin123</span>
-        </div>
 
         <div className="text-center pt-2 flex items-center justify-between border-t border-surface-200/40 text-xs">
           <Link href="/" className="text-gray-400 hover:text-white transition-colors">

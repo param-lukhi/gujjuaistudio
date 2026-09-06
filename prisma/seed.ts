@@ -6,24 +6,24 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding Gujju AI Studio database with complete auth and user data...');
 
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const hashedPassword = await bcrypt.hash('Hanumandada@gujju', 10);
   const clientPassword = await bcrypt.hash('client123', 10);
 
   // 1. Create Admin User
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@gujjuai.com' },
+    where: { email: 'gujjuaistudio@gmail.com' },
     update: {
       password: hashedPassword,
-      name: 'Gujju AI Admin',
-      username: 'admin',
+      name: 'Gujju AI Studio Owner',
+      username: 'gujjuaistudio',
       role: 'ADMIN',
       emailVerified: new Date(),
       isVerified: true,
     },
     create: {
-      email: 'admin@gujjuai.com',
-      name: 'Gujju AI Admin',
-      username: 'admin',
+      email: 'gujjuaistudio@gmail.com',
+      name: 'Gujju AI Studio Owner',
+      username: 'gujjuaistudio',
       role: 'ADMIN',
       password: hashedPassword,
       emailVerified: new Date(),
