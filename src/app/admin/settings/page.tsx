@@ -8,8 +8,8 @@ export default function WebsiteSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [formData, setFormData] = useState({
     agencyName: 'Gujju AI Studio',
-    contactEmail: 'contact@gujjuaistudio.com',
-    whatsappNumber: '+91 98765 43210',
+    contactEmail: 'gujjuaistudio@gmail.com',
+    whatsappNumber: '+91 99252 63558',
     cloudinaryCloudName: 'gujju-ai-studio',
     cloudinaryApiKey: '1234567890',
   });

@@ -119,15 +119,18 @@ export default function ContactPage() {
                   <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#25D366]/20 text-[#25D366]">Chat →</span>
                 </a>
 
-                <div className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4">
+                <a
+                  href="mailto:gujjuaistudio@gmail.com"
+                  className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4 hover:border-accent-cyan/40 transition-all group"
+                >
                   <div className="w-11 h-11 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className="text-xs text-gray-400 uppercase font-semibold">Email Support</h4>
-                    <p className="text-sm font-bold text-white">contact@gujjuaistudio.com</p>
+                    <p className="text-sm font-bold text-white group-hover:text-accent-cyan transition-colors">gujjuaistudio@gmail.com</p>
                   </div>
-                </div>
+                </a>
 
                 <div className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-accent-violet/20 text-accent-violet flex items-center justify-center shrink-0">

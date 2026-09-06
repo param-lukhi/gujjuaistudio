@@ -98,7 +98,7 @@ export async function GET(
           </div>
 
           <div class="footer">
-            Thank you for choosing Gujju AI Studio! For support inquiries, contact support@gujjuaistudio.com.
+            Thank you for choosing Gujju AI Studio! For support inquiries, contact gujjuaistudio@gmail.com.
           </div>
         </div>
       </body>

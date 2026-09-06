@@ -15,7 +15,7 @@ export async function sendEmail({
   const port = process.env.EMAIL_SERVER_PORT;
   const user = process.env.EMAIL_SERVER_USER;
   const pass = process.env.EMAIL_SERVER_PASSWORD;
-  const from = process.env.EMAIL_FROM || 'Gujju AI Studio <noreply@gujjuaistudio.com>';
+  const from = process.env.EMAIL_FROM || 'Gujju AI Studio <gujjuaistudio@gmail.com>';
 
   if (host && user && pass) {
     try {
