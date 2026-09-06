@@ -9,12 +9,14 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId:
+      clientId: (
         process.env.GOOGLE_CLIENT_ID ||
-        ['1014146387301-', 'qkiplpd5r9jjs6jold7v4uluj1rbdlkj', '.apps.google', 'usercontent.com'].join(''),
-      clientSecret:
+        ['1014146387301-', 'qkiplpd5r9jjs6jold7v4uluj1rbdlkj', '.apps.google', 'usercontent.com'].join('')
+      ).trim().replace(/[\r\n\t ]+/g, ''),
+      clientSecret: (
         process.env.GOOGLE_CLIENT_SECRET ||
-        ['GOCSPX', '-qud-', 'WMxrihX_kqEHD', 'zwJJQTZtc-Y'].join(''),
+        ['GOCSPX', '-qud-', 'WMxrihX_kqEHD', 'zwJJQTZtc-Y'].join('')
+      ).trim().replace(/[\r\n\t ]+/g, ''),
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
