@@ -450,7 +450,7 @@ export default function ManageBookingsPage() {
                       required
                       value={newBookingForm.clientEmail}
                       onChange={(e) => setNewBookingForm({ ...newBookingForm, clientEmail: e.target.value })}
-                      placeholder="e.g. ramesh@gmail.com"
+                      placeholder="Enter email"
                       className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
                     />
                   </div>

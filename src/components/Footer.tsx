@@ -97,7 +97,9 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4">
           <p>© {new Date().getFullYear()} Gujju AI Studio. All rights reserved.</p>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-wrap justify-center">
+            <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
             <Link href="/client" className="hover:text-gray-300 transition-colors">Client Portal</Link>
             <Link href="/admin/login" className="hover:text-gray-300 transition-colors">Admin Login</Link>
           </div>

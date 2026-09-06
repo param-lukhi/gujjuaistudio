@@ -507,7 +507,7 @@ export default function AdminUsersPage() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="e.g. anand@company.com"
+                      placeholder="Enter email"
                       className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
                     />
                   </div>

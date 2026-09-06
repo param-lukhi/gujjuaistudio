@@ -499,7 +499,7 @@ function BookingWizard() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="name@business.com"
+                  placeholder="Enter email"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs sm:text-sm focus:outline-none focus:border-brand-500"
                 />
               </div>

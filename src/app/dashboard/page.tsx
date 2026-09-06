@@ -130,11 +130,6 @@ export default function DashboardPage() {
                     <Building className="w-3.5 h-3.5 text-gray-500" /> {profileData.businessName}
                   </span>
                 )}
-                {profileData?.phoneNumber && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-gray-500" /> {profileData.phoneNumber}
-                  </span>
-                )}
               </div>
             </div>
           </div>

@@ -214,7 +214,7 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="aarav@patelfashion.com"
+                  placeholder="Enter email"
                   className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:border-brand-500 focus:outline-none"
                 />
               </div>

@@ -28,7 +28,6 @@ async function main() {
       password: hashedPassword,
       emailVerified: new Date(),
       isVerified: true,
-      phoneNumber: '+91 98765 43210',
       businessName: 'Gujju AI Studio HQ',
       bio: 'Head of Creative Engineering & AI Reel Production.',
       country: 'India',
