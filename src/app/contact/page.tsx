@@ -105,40 +105,40 @@ export default function ContactPage() {
                   href="https://wa.me/919925263558?text=Hello%20Gujju%20AI%20Studio%2C%20I%20want%20to%20inquire%20about%20AI%20video%20ads"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center justify-between gap-4 hover:border-[#25D366]/50 hover:bg-[#25D366]/5 transition-all group"
+                  className="glass-panel p-4 sm:p-5 rounded-2xl border-surface-200/60 flex items-center justify-between gap-3 sm:gap-4 hover:border-[#25D366]/50 hover:bg-[#25D366]/5 transition-all group"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
                       <Phone className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase font-semibold">Direct WhatsApp & Call</h4>
-                      <p className="text-sm font-bold text-white group-hover:text-[#25D366] transition-colors">+91 99252 63558</p>
+                    <div className="overflow-hidden">
+                      <h4 className="text-[11px] sm:text-xs text-gray-400 uppercase font-semibold">Direct WhatsApp & Call</h4>
+                      <p className="text-xs sm:text-sm font-bold text-white group-hover:text-[#25D366] transition-colors truncate">+91 99252 63558</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#25D366]/20 text-[#25D366]">Chat →</span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#25D366]/20 text-[#25D366] shrink-0">Chat →</span>
                 </a>
 
                 <a
                   href="mailto:gujjuaistudio@gmail.com"
-                  className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4 hover:border-accent-cyan/40 transition-all group"
+                  className="glass-panel p-4 sm:p-5 rounded-2xl border-surface-200/60 flex items-center gap-3 sm:gap-4 hover:border-accent-cyan/40 transition-all group overflow-hidden"
                 >
-                  <div className="w-11 h-11 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h4 className="text-xs text-gray-400 uppercase font-semibold">Email Support</h4>
-                    <p className="text-sm font-bold text-white group-hover:text-accent-cyan transition-colors">gujjuaistudio@gmail.com</p>
+                  <div className="overflow-hidden">
+                    <h4 className="text-[11px] sm:text-xs text-gray-400 uppercase font-semibold">Email Support</h4>
+                    <p className="text-xs sm:text-sm font-bold text-white group-hover:text-accent-cyan transition-colors truncate">gujjuaistudio@gmail.com</p>
                   </div>
                 </a>
 
-                <div className="glass-panel p-5 rounded-2xl border-surface-200/60 flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-accent-violet/20 text-accent-violet flex items-center justify-center shrink-0">
+                <div className="glass-panel p-4 sm:p-5 rounded-2xl border-surface-200/60 flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-accent-violet/20 text-accent-violet flex items-center justify-center shrink-0">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs text-gray-400 uppercase font-semibold">Studio Hub</h4>
-                    <p className="text-sm font-bold text-white">Surat & Ahmedabad, Gujarat, India</p>
+                    <h4 className="text-[11px] sm:text-xs text-gray-400 uppercase font-semibold">Studio Hub</h4>
+                    <p className="text-xs sm:text-sm font-bold text-white">Surat & Ahmedabad, Gujarat, India</p>
                   </div>
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function ContactPage() {
 
             {/* Form Side */}
             <div className="lg:col-span-7">
-              <div className="glass-panel p-8 rounded-3xl border border-surface-200/70 shadow-2xl space-y-6">
+              <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/70 shadow-2xl space-y-6">
 
                 {/* Guest Visitor Warning Notice */}
                 {!isAuthenticated && (

@@ -24,7 +24,7 @@ export default function WebsiteSettingsPage() {
     <div className="flex min-h-screen bg-[#080B11]">
       <AdminSidebar />
 
-      <main className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 lg:pt-8 space-y-6 sm:space-y-8 overflow-y-auto min-w-0 w-full">
         
         <div className="border-b border-surface-200/50 pb-6">
           <h1 className="text-2xl sm:text-3xl font-black text-white">Website & API Settings</h1>

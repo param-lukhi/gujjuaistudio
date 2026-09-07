@@ -376,7 +376,7 @@ function RegisterForm() {
       {/* Invisible container for Firebase reCAPTCHA */}
       <div id="recaptcha-container" />
 
-      <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
+      <div className="glass-panel p-6 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="w-16 h-16 rounded-2xl overflow-hidden border border-brand-500/30 mx-auto shadow-lg shadow-brand-500/30 bg-[#080B11]">
@@ -621,7 +621,7 @@ function RegisterForm() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 placeholder="Enter 6-digit OTP"
-                className="w-full bg-surface-100 border-2 border-brand-500 focus:ring-2 focus:ring-brand-500/40 rounded-2xl py-3.5 text-center text-2xl tracking-[12px] font-mono font-bold text-white placeholder-gray-600 outline-none transition-all shadow-inner"
+                className="w-full bg-surface-100 border-2 border-brand-500 focus:ring-2 focus:ring-brand-500/40 rounded-2xl py-3.5 text-center text-xl sm:text-2xl tracking-[6px] sm:tracking-[12px] font-mono font-bold text-white placeholder-gray-600 outline-none transition-all shadow-inner"
               />
 
               <div className="flex items-center justify-between text-xs pt-1 px-1">

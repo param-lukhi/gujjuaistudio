@@ -149,7 +149,7 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
       {/* Auth Modal if package clicked while logged out */}
       {selectedPkgSlug && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md bg-[#0D111A] p-6 sm:p-8 rounded-3xl border border-brand-500/30 space-y-6 shadow-2xl relative">
+          <div className="w-full max-w-md bg-[#0D111A] p-5 sm:p-8 rounded-3xl border border-brand-500/30 space-y-5 sm:space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setSelectedPkgSlug(null)}
               className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
@@ -270,13 +270,13 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
             return (
               <div
                 key={pkg.id}
-                className={`glass-panel rounded-3xl p-8 flex flex-col justify-between relative transition-all duration-300 ${isPopular
-                    ? 'border-brand-500 bg-brand-950/20 shadow-2xl shadow-brand-500/20 scale-105 z-10'
+                className={`glass-panel rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative transition-all duration-300 ${isPopular
+                    ? 'border-brand-500 bg-brand-950/20 shadow-2xl shadow-brand-500/20 md:scale-105 z-10'
                     : 'border-surface-200/50 hover:border-surface-200'
                   }`}
               >
                 {isPopular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-brand-600 to-accent-violet text-white text-xs font-extrabold uppercase tracking-wider shadow-lg flex items-center gap-1.5">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-brand-600 to-accent-violet text-white text-xs font-extrabold uppercase tracking-wider shadow-lg flex items-center gap-1.5 whitespace-nowrap">
                     <Sparkles className="w-3.5 h-3.5" />
                     MOST POPULAR
                   </div>
@@ -319,7 +319,7 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
                   type="button"
                   onClick={() => handleSelectPackage(pkg.slug)}
                   className={`w-full py-3.5 rounded-xl text-sm font-bold text-center flex items-center justify-center gap-2 transition-all ${isPopular
-                      ? 'btn-glow text-white shadow-xl shadow-brand-500/30 hover:scale-105'
+                      ? 'btn-glow text-white shadow-xl shadow-brand-500/30 hover:scale-[1.02]'
                       : 'bg-surface-100 hover:bg-surface-200 text-white border border-surface-200 hover:border-brand-500/50'
                     }`}
                 >

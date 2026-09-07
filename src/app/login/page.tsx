@@ -163,7 +163,7 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-md relative z-10">
-      <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
+      <div className="glass-panel p-6 sm:p-10 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6">
         
         {/* Header */}
         <div className="text-center space-y-2">
@@ -310,7 +310,7 @@ function LoginForm() {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                     placeholder="Enter 6-digit OTP"
-                    className="w-full bg-surface-100/80 border border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 text-center text-lg tracking-[8px] font-mono text-white placeholder-gray-600 outline-none transition-all"
+                    className="w-full bg-surface-100/80 border border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-3 text-center text-lg tracking-[4px] sm:tracking-[8px] font-mono text-white placeholder-gray-600 outline-none transition-all"
                   />
                 </div>
               )}

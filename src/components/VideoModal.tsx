@@ -28,18 +28,19 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-4xl bg-surface-50 border border-surface-200/80 rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col md:flex-row">
+      <div className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto md:overflow-hidden bg-surface-50 border border-surface-200/80 rounded-2xl sm:rounded-3xl shadow-2xl z-10 flex flex-col md:flex-row">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-black/90 transition-colors"
+          className="absolute top-3 right-3 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-black/90 transition-colors"
+          aria-label="Close Preview"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Video Frame */}
-        <div className="w-full md:w-3/5 bg-black relative aspect-[9/16] md:aspect-[3/4] flex items-center justify-center overflow-hidden max-h-[70vh]">
+        <div className="w-full md:w-3/5 bg-black relative aspect-[9/16] md:aspect-[3/4] flex items-center justify-center overflow-hidden max-h-[48vh] sm:max-h-[60vh] md:max-h-[70vh]">
           <video
             src={item.videoUrl}
             controls
@@ -52,7 +53,7 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
         </div>
 
         {/* Video Info Details */}
-        <div className="w-full md:w-2/5 p-6 flex flex-col justify-between space-y-6 bg-surface-50">
+        <div className="w-full md:w-2/5 p-5 sm:p-6 flex flex-col justify-between space-y-4 sm:space-y-6 bg-surface-50">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-400 border border-brand-500/30">

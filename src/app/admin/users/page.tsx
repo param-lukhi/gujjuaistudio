@@ -241,7 +241,7 @@ export default function AdminUsersPage() {
     <div className="flex min-h-screen bg-[#080B11] text-white">
       <AdminSidebar />
 
-      <main className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 lg:pt-8 space-y-6 overflow-y-auto min-w-0 w-full">
         {/* Header & Search */}
         <div className="glass-panel p-6 rounded-3xl border border-surface-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">

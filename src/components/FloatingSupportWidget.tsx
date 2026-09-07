@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, X, Send, CheckCircle2, Sparkles, 
-  User, Mail, Phone, CheckCheck, Loader2, RefreshCw, MessageCircle
+  User, Mail, Phone, CheckCheck, Loader2, RefreshCw, MessageCircle, Instagram
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -12,6 +12,7 @@ const WHATSAPP_PREFILLED_MESSAGE = encodeURIComponent(
   'Hello Gujju AI Studio, I want to inquire about AI video ads'
 );
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PREFILLED_MESSAGE}`;
+const INSTAGRAM_URL = 'https://instagram.com/gujjuaistudio';
 
 interface ChatBubble {
   id: string;
@@ -265,11 +266,11 @@ export default function FloatingSupportWidget() {
   return (
     <>
       {/* Floating Container (Bottom-Right) */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">
         
         {/* 💬 LIVE WHATSAPP & INSTAGRAM STYLE CHAT MESSENGER WINDOW */}
         {isOpen && (
-          <div className="w-[92vw] sm:w-[400px] h-[550px] max-h-[80vh] rounded-3xl bg-[#090D16]/95 backdrop-blur-2xl border border-surface-200/80 shadow-2xl shadow-black/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 mb-2">
+          <div className="w-[calc(100vw-32px)] sm:w-[400px] h-[520px] max-h-[78vh] rounded-3xl bg-[#090D16]/95 backdrop-blur-2xl border border-surface-200/80 shadow-2xl shadow-black/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 mb-2">
             
             {/* 1. Chat Header */}
             <div className="p-4 bg-gradient-to-r from-brand-600 via-brand-500 to-accent-cyan flex items-center justify-between text-white shrink-0 shadow-lg shadow-brand-600/20">
@@ -316,6 +317,18 @@ export default function FloatingSupportWidget() {
                     <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-10.416c-4.417 0-8.002 3.584-8.003 8.001 0 1.41.368 2.784 1.066 3.994l-1.134 4.14 4.239-1.112c1.172.64 2.497.978 3.829.979h.003c4.418 0 8.003-3.585 8.003-8.003 0-4.417-3.585-8-8.003-8z" />
                   </svg>
                   <span className="hidden sm:inline">WhatsApp</span>
+                </a>
+
+                {/* Direct Instagram Action */}
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-1 text-xs font-bold"
+                  title="Open Instagram Profile"
+                >
+                  <Instagram className="w-4 h-4" />
+                  <span className="hidden sm:inline">Instagram</span>
                 </a>
 
                 <button
@@ -462,6 +475,14 @@ export default function FloatingSupportWidget() {
                 >
                   💬 WhatsApp
                 </a>
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#f09433]/20 via-[#dc2743]/20 to-[#bc1888]/20 hover:opacity-90 border border-pink-500/40 text-pink-400 shrink-0 transition-colors font-bold flex items-center gap-1"
+                >
+                  <Instagram className="w-3 h-3 text-pink-400" /> Instagram
+                </a>
               </div>
             )}
 
@@ -499,7 +520,7 @@ export default function FloatingSupportWidget() {
         {/* Floating Action Buttons Column (Bottom-Right) */}
         <div className="flex flex-col items-center gap-3">
           
-          {/* Floating Message Action Button (Above WhatsApp) */}
+          {/* Floating Message Action Button (Top of stack) */}
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
@@ -523,7 +544,33 @@ export default function FloatingSupportWidget() {
             </span>
           </button>
 
-          {/* Floating WhatsApp Action Button (Bottom) */}
+          {/* Floating Instagram Action Button (Middle of stack) */}
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-2xl shadow-pink-600/40 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+            aria-label="Open Instagram Profile"
+            title="Follow us on Instagram (@gujjuaistudio)"
+          >
+            {/* Pulsing Ripple Effect */}
+            <span className="absolute inset-0 rounded-full bg-pink-500 animate-ping opacity-25 pointer-events-none" />
+
+            {/* Instagram Icon */}
+            <Instagram className="w-6 h-6 text-white relative z-10" />
+
+            {/* Online/Active Badge */}
+            <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center shadow-md">
+              <span className="w-2.5 h-2.5 bg-pink-500 rounded-full" />
+            </span>
+
+            {/* Tooltip on hover */}
+            <span className="absolute right-16 px-3 py-1.5 rounded-xl bg-[#0B0F19]/90 border border-surface-200/80 text-white text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+              Follow on Instagram
+            </span>
+          </a>
+
+          {/* Floating WhatsApp Action Button (Bottom of stack) */}
           <a
             href={WHATSAPP_URL}
             target="_blank"

@@ -155,7 +155,7 @@ export default function Navbar() {
             </nav>
 
             {/* Desktop Action Area */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-3">
               <button
                 onClick={(e) => handleProtectedAction(e, 'book an AI reel service', '/book')}
                 className="btn-glow px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
@@ -361,7 +361,7 @@ export default function Navbar() {
             {/* Mobile Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl bg-surface-100 border border-surface-200 text-gray-300 hover:text-white"
+              className="lg:hidden p-2 rounded-xl bg-surface-100 border border-surface-200 text-gray-300 hover:text-white"
               aria-label="Toggle Navigation"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -371,7 +371,7 @@ export default function Navbar() {
 
         {/* Mobile Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden glass-panel border-b border-surface-200/80 px-4 pt-3 pb-6 mt-3 space-y-3 animate-in fade-in slide-in-from-top-4">
+          <div className="lg:hidden glass-panel border-b border-surface-200/80 px-4 pt-3 pb-6 mt-3 space-y-3 animate-in fade-in slide-in-from-top-4 max-h-[calc(100vh-80px)] overflow-y-auto">
             <div className="flex flex-col space-y-1">
               {navLinks.map((link) => (
                 <Link

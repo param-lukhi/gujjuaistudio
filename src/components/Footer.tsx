@@ -26,7 +26,13 @@ export default function Footer() {
               Crafting high-converting, scroll-stopping AI product video reels for Indian e-commerce, D2C brands, and restaurants.
             </p>
             <div className="flex items-center gap-3 pt-2">
-              <a href="#" className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-white hover:border-brand-500 transition-colors">
+              <a
+                href="https://instagram.com/gujjuaistudio"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-pink-400 hover:border-pink-500 transition-colors"
+                title="Follow us on Instagram"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
               <a href="#" className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-white hover:border-brand-500 transition-colors">

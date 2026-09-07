@@ -144,7 +144,7 @@ export default function AdminHeroPage() {
     <div className="flex min-h-screen bg-[#080B11]">
       <AdminSidebar />
 
-      <main className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto max-h-screen">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 lg:pt-8 space-y-6 sm:space-y-8 overflow-y-auto max-h-screen min-w-0 w-full">
         
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-surface-200/50 pb-6">

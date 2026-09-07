@@ -96,18 +96,18 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
             </p>
 
             {/* Stat Counters / Highlights */}
-            <div className="grid grid-cols-3 gap-3 pt-2 max-w-lg mx-auto lg:mx-0">
-              <div className="glass-panel p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-xl sm:text-2xl font-black text-white">2 Days</div>
-                <div className="text-[11px] text-gray-400 font-medium">Guaranteed Delivery</div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 max-w-lg mx-auto lg:mx-0">
+              <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
+                <div className="text-lg sm:text-2xl font-black text-white">2 Days</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Guaranteed Delivery</div>
               </div>
-              <div className="glass-panel p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-xl sm:text-2xl font-black text-brand-400">₹600</div>
-                <div className="text-[11px] text-gray-400 font-medium">Starter Packages</div>
+              <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
+                <div className="text-lg sm:text-2xl font-black text-brand-400">₹600</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Starter Packages</div>
               </div>
-              <div className="glass-panel p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-xl sm:text-2xl font-black text-emerald-400">10x CTR</div>
-                <div className="text-[11px] text-gray-400 font-medium">Instagram Boost</div>
+              <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
+                <div className="text-lg sm:text-2xl font-black text-emerald-400">10x CTR</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Instagram Boost</div>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
             </div>
 
             {/* Trust badge */}
-            <div className="flex items-center justify-center lg:justify-start gap-3 pt-2 text-xs text-gray-400">
+            <div className="flex items-center justify-center lg:justify-start gap-3 pt-2 text-xs text-gray-400 flex-wrap">
               <div className="flex -space-x-2">
                 <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" alt="Client" />
                 <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="Client" />
@@ -153,9 +153,9 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
           </div>
 
           {/* Right Column: Hero Video Teaser Showcase Card (Dynamic from Database) */}
-          <div className="lg:col-span-5 relative flex justify-center">
+          <div className="lg:col-span-5 relative flex justify-center w-full px-2 sm:px-0">
             
-            <div className="relative w-full max-w-[340px] sm:max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden glass-panel border border-brand-500/40 p-2.5 shadow-2xl shadow-brand-500/20 glow-box-blue group">
+            <div className="relative w-full max-w-[320px] sm:max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden glass-panel border border-brand-500/40 p-2 sm:p-2.5 shadow-2xl shadow-brand-500/20 glow-box-blue group">
               
               {/* Inner Frame */}
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black">
@@ -172,13 +172,13 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                 )}
 
                 {/* Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/35 flex flex-col justify-between p-5">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/35 flex flex-col justify-between p-4 sm:p-5">
                   <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-600/85 backdrop-blur-md text-white border border-brand-400/40 flex items-center gap-1.5 shadow-md">
+                    <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-brand-600/85 backdrop-blur-md text-white border border-brand-400/40 flex items-center gap-1.5 shadow-md">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                       {heroData.badgeText || 'AI Reel Demo'}
                     </span>
-                    <span className="text-xs font-mono text-gray-300 bg-black/60 px-2.5 py-1 rounded-md border border-white/10">
+                    <span className="text-[11px] sm:text-xs font-mono text-gray-300 bg-black/60 px-2 sm:px-2.5 py-1 rounded-md border border-white/10">
                       {heroData.durationText || '00:30'}
                     </span>
                   </div>
@@ -187,7 +187,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                     <div className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-accent-violet/85 text-white shadow-sm">
                       {heroData.category || 'Fashion & Luxury'}
                     </div>
-                    <h3 className="text-lg font-bold text-white drop-shadow">
+                    <h3 className="text-base sm:text-lg font-bold text-white drop-shadow">
                       {heroData.title || 'Luxury Silk Saree AI Showcase'}
                     </h3>
                     <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
@@ -205,30 +205,30 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
               </div>
 
               {/* Floating Badge 1 (Top-Left) */}
-              <div className="absolute -top-4 -left-4 glass-panel p-3 rounded-xl border-brand-400/40 flex items-center gap-2.5 shadow-xl animate-float">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+              <div className="absolute top-2 left-2 sm:-top-4 sm:-left-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
                   ✓
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">
+                  <div className="text-[11px] sm:text-xs font-bold text-white">
                     {heroData.floatingBadge1Title || 'Commercial Rights'}
                   </div>
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[9px] sm:text-[10px] text-gray-400">
                     {heroData.floatingBadge1Sub || '100% Monetization'}
                   </div>
                 </div>
               </div>
 
               {/* Floating Badge 2 (Bottom-Right) */}
-              <div className="absolute -bottom-4 -right-4 glass-panel p-3 rounded-xl border-brand-400/40 flex items-center gap-2.5 shadow-xl animate-float" style={{ animationDelay: '2s' }}>
-                <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
-                  <Zap className="w-4 h-4" />
+              <div className="absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20" style={{ animationDelay: '2s' }}>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">
+                  <div className="text-[11px] sm:text-xs font-bold text-white">
                     {heroData.floatingBadge2Title || 'AI Voiceover'}
                   </div>
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[9px] sm:text-[10px] text-gray-400">
                     {heroData.floatingBadge2Sub || 'Hindi & English'}
                   </div>
                 </div>
