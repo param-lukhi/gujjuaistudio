@@ -405,6 +405,37 @@ export default function MyBookingsPage() {
                 <StatusBadge status={selectedBooking.status} />
               </div>
               <div className="flex justify-between py-1 border-b border-surface-200/30">
+                <span className="text-gray-400">Payment Status:</span>
+                <span className={`px-2 py-0.5 rounded-lg font-bold text-[11px] ${
+                  selectedBooking.paymentStatus === 'PAID'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : selectedBooking.paymentStatus === 'PENDING_VERIFICATION'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                }`}>
+                  {selectedBooking.paymentStatus === 'PAID' ? '✓ PAID' : selectedBooking.paymentStatus === 'PENDING_VERIFICATION' ? '⏳ UNDER VERIFICATION' : 'UNPAID'}
+                </span>
+              </div>
+              {selectedBooking.paymentRef && (
+                <div className="flex justify-between py-1 border-b border-surface-200/30">
+                  <span className="text-gray-400">UPI Ref / UTR:</span>
+                  <span className="font-mono font-bold text-brand-300">{selectedBooking.paymentRef}</span>
+                </div>
+              )}
+              {selectedBooking.paymentProof && (
+                <div className="py-2 border-b border-surface-200/30">
+                  <span className="text-gray-400 block mb-1">Payment Receipt / Screenshot:</span>
+                  <a
+                    href={selectedBooking.paymentProof}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:underline font-bold"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> View Uploaded Screenshot
+                  </a>
+                </div>
+              )}
+              <div className="flex justify-between py-1 border-b border-surface-200/30">
                 <span className="text-gray-400">Scheduled Date:</span>
                 <span className="font-bold text-white">{selectedBooking.bookingDate || 'Not specified'}</span>
               </div>

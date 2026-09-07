@@ -94,7 +94,27 @@ export default function ManageBookingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) fetchBookings();
+      if (res.ok) {
+        setBookings(bookings.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentStatus: newPaymentStatus }),
+      });
+      if (res.ok) {
+        setBookings(bookings.map((b) => (b.id === id ? { ...b, paymentStatus: newPaymentStatus } : b)));
+        if (detailsModalBooking?.id === id) {
+          setDetailsModalBooking((prev: any) => ({ ...prev, paymentStatus: newPaymentStatus }));
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -320,9 +340,25 @@ export default function ManageBookingsPage() {
                         <div className="text-[10px] text-gray-400">{b.clientPhone}</div>
                       </td>
 
-                      <td className="p-3.5 space-y-0.5 min-w-[140px]">
+                      <td className="p-3.5 space-y-1 min-w-[140px]">
                         <div className="text-gray-200 font-bold">{b.packageName}</div>
-                        <div className="text-brand-400 font-black">{formatCurrencyINR(b.price)}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-brand-400 font-black">{formatCurrencyINR(b.price)}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                            b.paymentStatus === 'PAID'
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              : b.paymentStatus === 'PENDING_VERIFICATION'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          }`}>
+                            {b.paymentStatus === 'PAID' ? 'PAID' : b.paymentStatus === 'PENDING_VERIFICATION' ? 'VERIFY' : 'UNPAID'}
+                          </span>
+                        </div>
+                        {b.paymentRef && (
+                          <div className="text-[10px] font-mono text-gray-400 truncate max-w-[120px]" title={`UTR: ${b.paymentRef}`}>
+                            UTR: {b.paymentRef}
+                          </div>
+                        )}
                       </td>
 
                       <td className="p-3.5 space-y-1 min-w-[140px]">
@@ -707,6 +743,42 @@ export default function ManageBookingsPage() {
                 <p className="text-gray-300">
                   <strong>Date & Slot:</strong> {detailsModalBooking.bookingDate} ({detailsModalBooking.bookingTime})
                 </p>
+
+                {/* Payment verification control */}
+                <div className="p-3 bg-surface-100/90 rounded-2xl border border-surface-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-300">Payment Status:</span>
+                    <select
+                      value={detailsModalBooking.paymentStatus || 'UNPAID'}
+                      onChange={(e) => handlePaymentStatusChange(detailsModalBooking.id, e.target.value)}
+                      className="text-xs bg-[#080B11] border border-surface-200 text-white rounded-xl px-2.5 py-1 font-bold focus:outline-none focus:border-brand-500 cursor-pointer"
+                    >
+                      <option value="UNPAID">❌ UNPAID</option>
+                      <option value="PENDING_VERIFICATION">⏳ PENDING VERIFICATION</option>
+                      <option value="PAID">✓ PAID (VERIFIED)</option>
+                    </select>
+                  </div>
+                  {detailsModalBooking.paymentRef && (
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-surface-200/40">
+                      <span className="text-gray-400">UPI Ref / UTR:</span>
+                      <span className="font-mono font-bold text-emerald-400">{detailsModalBooking.paymentRef}</span>
+                    </div>
+                  )}
+                  {detailsModalBooking.paymentProof && (
+                    <div className="pt-1 border-t border-surface-200/40">
+                      <span className="text-gray-400 block mb-1">Uploaded Screenshot:</span>
+                      <a
+                        href={detailsModalBooking.paymentProof}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:underline font-bold"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> View Payment Screenshot
+                      </a>
+                    </div>
+                  )}
+                </div>
+
                 <div className="p-3 bg-surface-100 rounded-xl space-y-1 mt-2">
                   <span className="text-gray-400 font-bold block">Brief & Requirements:</span>
                   <p className="text-gray-200 whitespace-pre-wrap">{detailsModalBooking.description}</p>

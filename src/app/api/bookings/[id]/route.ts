@@ -16,7 +16,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { status, finalVideoUrl, notes, bookingDate, bookingTime } = body;
+    const { status, finalVideoUrl, notes, bookingDate, bookingTime, paymentStatus, paymentRef, paymentProof, paymentMethod } = body;
 
     const existingBooking = await prisma.booking.findUnique({
       where: { id },
@@ -35,7 +35,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Access denied: You cannot modify this booking.' }, { status: 403 });
     }
 
-    // Client modifications (Reschedule or Cancel)
+    // Client modifications (Reschedule, Cancel, or Submit Payment)
     if (!isAdmin) {
       const allowedData: any = {};
 
@@ -52,6 +52,13 @@ export async function PUT(
         }
         allowedData.bookingDate = bookingDate;
         allowedData.bookingTime = bookingTime;
+      }
+
+      if (paymentRef || paymentProof) {
+        allowedData.paymentRef = paymentRef || existingBooking.paymentRef;
+        allowedData.paymentProof = paymentProof || existingBooking.paymentProof;
+        allowedData.paymentMethod = paymentMethod || existingBooking.paymentMethod;
+        allowedData.paymentStatus = 'PENDING_VERIFICATION';
       }
 
       const updated = await prisma.booking.update({
@@ -71,6 +78,10 @@ export async function PUT(
         ...(notes !== undefined && { notes }),
         ...(bookingDate && { bookingDate }),
         ...(bookingTime && { bookingTime }),
+        ...(paymentStatus && { paymentStatus }),
+        ...(paymentRef !== undefined && { paymentRef }),
+        ...(paymentProof !== undefined && { paymentProof }),
+        ...(paymentMethod && { paymentMethod }),
       },
     });
 

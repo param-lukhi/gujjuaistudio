@@ -24,12 +24,24 @@ import {
   Check,
   Zap,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  QrCode,
+  Copy,
+  CheckCheck,
+  Smartphone,
+  CreditCard,
+  FileText,
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+
+const UPI_ID = '9925263558@upi';
+const UPI_PAYEE_NAME = 'Gujju AI Studio';
+const WHATSAPP_SUPPORT_NUMBER = '919925263558';
 
 const PACKAGES: Record<string, {
   name: string;
@@ -87,7 +99,7 @@ function BookingWizard() {
 
   const pkgFromUrl = searchParams.get('package') || 'professional';
 
-  // Wizard Step: 1: Service, 2: Date & Slot, 3: Details & Uploads, 4: Confirm, 5: Success
+  // Wizard Step: 1: Service, 2: Date & Slot, 3: Details & Uploads, 4: Confirm, 5: Payment, 6: Success
   const [currentStep, setCurrentStep] = useState(1);
 
   // Form State
@@ -114,6 +126,13 @@ function BookingWizard() {
   const [error, setError] = useState('');
   const [createdBooking, setCreatedBooking] = useState<any>(null);
 
+  // Payment Form State
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'GPAY' | 'PHONEPE' | 'PAYTM'>('UPI');
+  const [upiTransactionId, setUpiTransactionId] = useState('');
+  const [paymentProofUrl, setPaymentProofUrl] = useState('');
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
   // Auto-fill from session
   useEffect(() => {
     if (session?.user) {
@@ -129,7 +148,20 @@ function BookingWizard() {
 
   const activePackage = PACKAGES[selectedPackage] || PACKAGES.professional;
 
-  // Handle Image Upload
+  // Dynamic UPI URL for QR code & Direct UPI intent
+  const upiPayUrl = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${activePackage.price}&cu=INR&tn=${encodeURIComponent(`Booking - ${activePackage.name}`)}`;
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiPayUrl)}&margin=10`;
+
+  // Copy UPI ID to clipboard
+  const handleCopyUpi = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(UPI_ID);
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2500);
+    }
+  };
+
+  // Handle Image Upload (Project images)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -164,8 +196,33 @@ function BookingWizard() {
     setUploadedImages(uploadedImages.filter((_, i) => i !== index));
   };
 
-  // Submit Booking
-  const handleFinalSubmit = async () => {
+  // Handle Payment Screenshot Upload
+  const handlePaymentProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingProof(true);
+    const data = new FormData();
+    data.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+      const result = await res.json();
+      if (result.url) {
+        setPaymentProofUrl(result.url);
+      }
+    } catch (err) {
+      console.error('Error uploading payment receipt:', err);
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  // Submit Final Booking with Payment Verification
+  const handleFinalSubmitWithPayment = async (isPaidViaUpi: boolean = true) => {
     if (!formData.name || !formData.email || !formData.phone || !formData.productDescription) {
       setError('Please complete all required fields.');
       setCurrentStep(3);
@@ -175,6 +232,11 @@ function BookingWizard() {
     if (!selectedDate || !selectedTimeSlot) {
       setError('Please select a booking date and time slot.');
       setCurrentStep(2);
+      return;
+    }
+
+    if (isPaidViaUpi && !upiTransactionId.trim() && !paymentProofUrl) {
+      setError('Please enter your 12-digit UPI UTR / Transaction Reference ID or upload a screenshot to confirm payment.');
       return;
     }
 
@@ -198,6 +260,10 @@ function BookingWizard() {
           imageUrls: uploadedImages,
           bookingDate: selectedDate,
           bookingTime: selectedTimeSlot,
+          paymentStatus: isPaidViaUpi ? 'PENDING_VERIFICATION' : 'UNPAID',
+          paymentRef: upiTransactionId.trim() || (isPaidViaUpi ? 'PAID_VIA_UPI_APP' : null),
+          paymentProof: paymentProofUrl || null,
+          paymentMethod: paymentMethod,
         }),
       });
 
@@ -207,7 +273,7 @@ function BookingWizard() {
         setError(data.error || 'Failed to submit booking.');
       } else {
         setCreatedBooking(data.booking);
-        setCurrentStep(5); // Success step
+        setCurrentStep(6); // Success step
       }
     } catch (err) {
       setError('Network connection error. Please try again.');
@@ -223,20 +289,21 @@ function BookingWizard() {
     <div className="w-full max-w-4xl mx-auto">
       
       {/* Wizard Step Progress Tracker */}
-      {currentStep < 5 && (
+      {currentStep <= 5 && (
         <div className="mb-8">
           <div className="flex items-center justify-between relative">
             <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-surface-200 -translate-y-1/2 z-0" />
             <div
-              className="absolute top-1/2 left-0 h-0.5 bg-gradient-to-r from-brand-500 to-accent-cyan -translate-y-1/2 z-0 transition-all duration-300"
-              style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
+              className="absolute top-1/2 left-0 h-0.5 bg-gradient-to-r from-brand-500 via-accent-cyan to-emerald-400 -translate-y-1/2 z-0 transition-all duration-300"
+              style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
             />
 
             {[
               { num: 1, title: 'Service' },
               { num: 2, title: 'Date & Slot' },
               { num: 3, title: 'Details' },
-              { num: 4, title: 'Confirm' },
+              { num: 4, title: 'Review' },
+              { num: 5, title: 'Payment' },
             ].map((step) => {
               const isCompleted = currentStep > step.num;
               const isCurrent = currentStep === step.num;
@@ -245,7 +312,7 @@ function BookingWizard() {
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
                       isCompleted
-                        ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/40'
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/40'
                         : isCurrent
                         ? 'bg-gradient-to-tr from-brand-600 to-accent-cyan text-white ring-4 ring-brand-500/20'
                         : 'bg-surface-100 text-gray-500 border border-surface-200'
@@ -619,7 +686,7 @@ function BookingWizard() {
               }}
               className="btn-glow px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/30"
             >
-              Review & Confirm Booking
+              Review Booking
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -632,10 +699,10 @@ function BookingWizard() {
           <div className="border-b border-surface-200/50 pb-4">
             <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              4. Review & Confirm Booking
+              4. Review Booking Details
             </h2>
             <p className="text-xs sm:text-sm text-gray-400 mt-1">
-              Please double check all booking details before final confirmation.
+              Confirm your booking details before proceeding to the instant payment gateway.
             </p>
           </div>
 
@@ -657,8 +724,8 @@ function BookingWizard() {
                   <span className="font-bold text-white">{selectedTimeSlot}</span>
                 </div>
                 <div className="flex justify-between border-t border-surface-200/50 pt-2 text-base">
-                  <span className="font-bold text-white">Estimated Total:</span>
-                  <span className="font-black text-brand-400">{formatCurrencyINR(activePackage.price)}</span>
+                  <span className="font-bold text-white">Total Amount:</span>
+                  <span className="font-black text-emerald-400">{formatCurrencyINR(activePackage.price)}</span>
                 </div>
               </div>
             </div>
@@ -690,7 +757,7 @@ function BookingWizard() {
           <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-xs text-gray-300 flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-brand-400 shrink-0" />
             <span>
-              By confirming, your booking request will be scheduled in our production queue. You will receive real-time updates and direct chat support in your Client Dashboard.
+              In the next step, you can pay instantly via <strong>UPI, Google Pay, PhonePe, or Paytm QR</strong>. Instant verification & order confirmation will be generated.
             </span>
           </div>
 
@@ -704,42 +771,249 @@ function BookingWizard() {
             </button>
 
             <button
-              onClick={handleFinalSubmit}
-              disabled={submitting}
-              className="btn-glow px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/40 disabled:opacity-50"
+              onClick={() => {
+                setError('');
+                setCurrentStep(5); // Advance to Payment Gateway
+              }}
+              className="btn-glow px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/40"
             >
-              {submitting ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing Booking...
-                </span>
-              ) : (
-                <>
-                  Confirm Booking Now
-                  <Check className="w-4 h-4" />
-                </>
-              )}
+              Proceed to Payment
+              <CreditCard className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 5: BOOKING SUCCESS SCREEN */}
+      {/* STEP 5: DYNAMIC UPI QR & SECURE PAYMENT GATEWAY */}
       {currentStep === 5 && (
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6 animate-in fade-in duration-200">
+          
+          {/* Header */}
+          <div className="border-b border-surface-200/50 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-bold text-emerald-300 mb-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                100% Secure UPI Payment Gateway
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                <QrCode className="w-6 h-6 text-brand-400" />
+                5. Scan & Pay via UPI
+              </h2>
+            </div>
+
+            <div className="sm:text-right bg-surface-100/80 p-3 rounded-2xl border border-surface-200/60">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-semibold">Total Payable Amount</span>
+              <span className="text-2xl font-black text-emerald-400">{formatCurrencyINR(activePackage.price)}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            {/* Left: Dynamic QR Code Card (5 cols) */}
+            <div className="md:col-span-5 flex flex-col items-center p-6 rounded-3xl bg-[#090D16] border border-surface-200/80 shadow-2xl text-center space-y-4">
+              <div className="relative p-3 bg-white rounded-2xl shadow-xl shadow-black/50">
+                <img
+                  src={qrCodeImageUrl}
+                  alt="UPI QR Code"
+                  className="w-52 h-52 object-contain"
+                />
+                <div className="absolute inset-x-0 -bottom-3 flex justify-center">
+                  <span className="px-3 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider shadow-md">
+                    Amount: {formatCurrencyINR(activePackage.price)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 w-full space-y-2">
+                <p className="text-xs text-gray-300 font-medium">
+                  Scan using any UPI App on your phone:
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs font-bold text-gray-400">
+                  <span className="px-2 py-1 rounded-lg bg-surface-100 border border-surface-200">GPay</span>
+                  <span className="px-2 py-1 rounded-lg bg-surface-100 border border-surface-200">PhonePe</span>
+                  <span className="px-2 py-1 rounded-lg bg-surface-100 border border-surface-200">Paytm</span>
+                  <span className="px-2 py-1 rounded-lg bg-surface-100 border border-surface-200">BHIM</span>
+                </div>
+              </div>
+
+              {/* UPI ID copy bar */}
+              <div className="w-full p-2.5 rounded-xl bg-surface-100 border border-surface-200/70 flex items-center justify-between text-xs">
+                <div className="truncate pr-2 text-left">
+                  <span className="text-[10px] text-gray-400 block font-semibold">Studio UPI ID</span>
+                  <span className="font-mono font-bold text-white">{UPI_ID}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyUpi}
+                  className="px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/40 text-brand-300 border border-brand-500/30 text-xs font-bold flex items-center gap-1 transition-all shrink-0"
+                >
+                  {copiedUpi ? (
+                    <>
+                      <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 1-Click Pay on Mobile App Buttons */}
+              <div className="w-full pt-1">
+                <a
+                  href={upiPayUrl}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-95 text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Pay Directly in UPI App
+                </a>
+              </div>
+            </div>
+
+            {/* Right: Payment Confirmation Form (7 cols) */}
+            <div className="md:col-span-7 space-y-5">
+              
+              <div className="p-4 rounded-2xl bg-surface-100/50 border border-surface-200/60 space-y-3">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-brand-400" />
+                  Step-by-Step Payment Instructions:
+                </h3>
+                <ol className="text-xs text-gray-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+                  <li>Scan the dynamic QR code with Google Pay, PhonePe, or Paytm.</li>
+                  <li>Complete the payment of <strong className="text-emerald-400">{formatCurrencyINR(activePackage.price)}</strong>.</li>
+                  <li>Copy the <strong>12-digit UPI Reference Number / UTR</strong> from your payment receipt.</li>
+                  <li>Enter the UTR below and click <strong>"Verify & Complete Booking"</strong>.</li>
+                </ol>
+              </div>
+
+              {/* UTR Input Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                    UPI Reference / UTR Number (12 Digits) <span className="text-brand-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <CreditCard className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={upiTransactionId}
+                      onChange={(e) => setUpiTransactionId(e.target.value)}
+                      placeholder="e.g. 423589123456 or Transaction ID"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#080B11] border border-surface-200 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Found in payment details of your banking or UPI app after paying.
+                  </p>
+                </div>
+
+                {/* Upload Payment Screenshot (Optional) */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                    Upload Payment Screenshot (Optional)
+                  </label>
+                  
+                  {!paymentProofUrl ? (
+                    <div className="border border-dashed border-surface-200 rounded-xl p-3 text-center bg-surface-100/30 hover:bg-surface-100/50 transition-all">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePaymentProofUpload}
+                        id="proof-upload"
+                        className="hidden"
+                      />
+                      <label htmlFor="proof-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-gray-300 hover:text-white">
+                        <Upload className="w-4 h-4 text-brand-400" />
+                        <span>{uploadingProof ? 'Uploading Receipt...' : 'Attach Payment Screenshot'}</span>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300">
+                      <div className="flex items-center gap-2 truncate">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="truncate">Payment Screenshot Attached</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentProofUrl('')}
+                        className="text-rose-400 hover:underline font-bold shrink-0 ml-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Action */}
+                <div className="pt-2 space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleFinalSubmitWithPayment(true)}
+                    disabled={submitting}
+                    className="w-full btn-glow py-3.5 rounded-2xl font-black text-sm text-white flex items-center justify-center gap-2 shadow-xl shadow-brand-500/30 disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Verifying Payment & Booking...
+                      </span>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-5 h-5 text-emerald-300" />
+                        Submit Payment & Confirm Booking
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(4)}
+                      className="text-gray-400 hover:text-white flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" /> Back to Review
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleFinalSubmitWithPayment(false)}
+                      disabled={submitting}
+                      className="text-brand-400 hover:underline font-semibold"
+                    >
+                      Pay Later / Verify on WhatsApp →
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* STEP 6: BOOKING & PAYMENT SUCCESS SCREEN */}
+      {currentStep === 6 && (
         <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-surface-200/80 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
           <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/20">
             <CheckCircle2 className="w-10 h-10 animate-bounce" />
           </div>
 
           <div className="space-y-2">
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase">
-              Booking Confirmed
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+              Booking & Payment Received
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white">
               Thank You! Your AI Reel is Booked.
             </h2>
             <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto">
-              We have received your project details. Our AI team has started preparation for your selected date and time slot.
+              We have received your booking and UPI transaction details. Our creative director has assigned your project to the production queue.
             </p>
           </div>
 
@@ -750,16 +1024,25 @@ function BookingWizard() {
               <span className="font-mono font-bold text-brand-400">{createdBooking?.bookingRef || 'GAS-BKG-CONFIRMED'}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Scheduled Date:</span>
-              <span className="font-bold text-white">{selectedDate}</span>
+              <span className="text-gray-400">Selected Package:</span>
+              <span className="font-bold text-white">{activePackage.name} ({formatCurrencyINR(activePackage.price)})</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Time Slot:</span>
-              <span className="font-bold text-white">{selectedTimeSlot}</span>
+              <span className="text-gray-400">Scheduled Date & Slot:</span>
+              <span className="font-bold text-white">{selectedDate} • {selectedTimeSlot}</span>
             </div>
+            {upiTransactionId && (
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">UPI Ref / UTR:</span>
+                <span className="font-mono font-bold text-emerald-400">{upiTransactionId}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Status:</span>
-              <span className="font-bold text-amber-400">PENDING REVIEW</span>
+              <span className="text-gray-400">Payment Status:</span>
+              <span className="font-bold text-emerald-400 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" />
+                {createdBooking?.paymentStatus === 'PAID' ? 'PAID' : 'PENDING VERIFICATION'}
+              </span>
             </div>
           </div>
 
@@ -773,12 +1056,14 @@ function BookingWizard() {
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-gray-300 hover:text-white bg-surface-100 hover:bg-surface-200 border border-surface-200 transition-all text-center"
+            <a
+              href={`https://wa.me/${WHATSAPP_SUPPORT_NUMBER}?text=${encodeURIComponent(`Hello Gujju AI Studio, I just completed booking and UPI payment for Ref: ${createdBooking?.bookingRef || 'GAS-BKG'} (UTR: ${upiTransactionId || 'Submitted'}). Please check!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all text-center flex items-center justify-center gap-2"
             >
-              Client Dashboard
-            </Link>
+              Confirm on WhatsApp →
+            </a>
           </div>
         </div>
       )}

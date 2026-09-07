@@ -121,6 +121,10 @@ model Booking {
   refLink       String?
   imageUrls     String   @default("[]") // JSON stringified array of upload URLs
   status        String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
+  paymentStatus String   @default("UNPAID") // UNPAID, PENDING_VERIFICATION, PAID
+  paymentRef    String?  // UPI UTR or Transaction ID
+  paymentProof  String?  // Screenshot URL
+  paymentMethod String   @default("UPI") // UPI, GPAY, PHONEPE, PAYTM
   bookingDate   String?
   bookingTime   String?
   finalVideoUrl String?

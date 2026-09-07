@@ -89,6 +89,10 @@ export async function POST(request: Request) {
       imageUrls,
       bookingDate,
       bookingTime,
+      paymentStatus,
+      paymentRef,
+      paymentProof,
+      paymentMethod,
     } = body;
 
     const name = clientName || session.user.name || 'Client';
@@ -121,18 +125,25 @@ export async function POST(request: Request) {
         bookingDate,
         bookingTime,
         status: 'PENDING',
+        paymentStatus: paymentStatus || (paymentRef ? 'PENDING_VERIFICATION' : 'UNPAID'),
+        paymentRef: paymentRef || null,
+        paymentProof: paymentProof || null,
+        paymentMethod: paymentMethod || 'UPI',
       },
     });
 
     // Create confirmation notification for user
     if (session.user.id) {
       try {
+        const isPaid = paymentStatus === 'PAID' || paymentStatus === 'PENDING_VERIFICATION';
         await prisma.notification.create({
           data: {
             userId: session.user.id,
-            title: 'Booking Received',
-            message: `Your booking for "${booking.packageName}" on ${bookingDate} (${bookingTime}) is under review.`,
-            type: 'INFO',
+            title: isPaid ? 'Booking & Payment Submitted' : 'Booking Received',
+            message: isPaid 
+              ? `Your booking for "${booking.packageName}" (Ref: ${bookingRef}) with UPI UTR: ${paymentRef || 'Submitted'} is under verification.`
+              : `Your booking for "${booking.packageName}" on ${bookingDate} (${bookingTime}) is under review.`,
+            type: isPaid ? 'PAYMENT' : 'INFO',
             link: '/dashboard/bookings',
           },
         });
