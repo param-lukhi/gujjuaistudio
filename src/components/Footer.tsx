@@ -27,11 +27,11 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="https://instagram.com/gujjuaistudio"
+                href="https://www.instagram.com/gujju__ai__studio/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-pink-400 hover:border-pink-500 transition-colors"
-                title="Follow us on Instagram"
+                title="Follow us on Instagram (@gujju__ai__studio)"
               >
                 <Instagram className="w-4 h-4" />
               </a>

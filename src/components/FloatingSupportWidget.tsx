@@ -12,7 +12,7 @@ const WHATSAPP_PREFILLED_MESSAGE = encodeURIComponent(
   'Hello Gujju AI Studio, I want to inquire about AI video ads'
 );
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PREFILLED_MESSAGE}`;
-const INSTAGRAM_URL = 'https://instagram.com/gujjuaistudio';
+const INSTAGRAM_URL = 'https://www.instagram.com/gujju__ai__studio/';
 
 interface ChatBubble {
   id: string;
