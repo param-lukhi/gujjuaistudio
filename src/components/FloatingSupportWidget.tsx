@@ -68,7 +68,17 @@ export default function FloatingSupportWidget() {
         try {
           const parsed = JSON.parse(savedChat);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setChatBubbles(parsed);
+            // Sanitize history: remove any old corrupted bubbles that echoed user messages as ADMIN
+            const sanitized = parsed.filter((bubble, idx, arr) => {
+              if (bubble.sender === 'ADMIN') {
+                const prevBubble = arr[idx - 1];
+                if (prevBubble && prevBubble.sender === 'USER' && prevBubble.text === bubble.text) {
+                  return false;
+                }
+              }
+              return true;
+            });
+            setChatBubbles(sanitized);
           }
         } catch {}
       }
@@ -82,7 +92,7 @@ export default function FloatingSupportWidget() {
     }
   }, [isOpen, chatBubbles]);
 
-  // Poll for admin replies if activeMessageId exists
+  // Poll for actual admin replies if activeMessageId exists
   useEffect(() => {
     if (!isOpen || !activeMessageId) return;
 
@@ -92,25 +102,30 @@ export default function FloatingSupportWidget() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.replies) {
-            const adminReplies: any[] = JSON.parse(data.replies);
-            if (Array.isArray(adminReplies) && adminReplies.length > 0) {
+            const serverReplies: any[] = JSON.parse(data.replies);
+            if (Array.isArray(serverReplies) && serverReplies.length > 0) {
               setChatBubbles((prev) => {
-                const existingAdminReplyIds = new Set(prev.filter((b) => b.sender === 'ADMIN').map((b) => b.id));
+                const existingAdminReplyIds = new Set(
+                  prev.filter((b) => b.sender === 'ADMIN').map((b) => b.id)
+                );
                 const newBubbles = [...prev];
                 let hasNew = false;
 
-                adminReplies.forEach((rep) => {
-                  if (!existingAdminReplyIds.has(rep.id)) {
-                    hasNew = true;
-                    newBubbles.push({
-                      id: rep.id,
-                      sender: 'ADMIN',
-                      senderName: rep.senderName || 'Gujju AI Studio Support',
-                      text: rep.text,
-                      createdAt: rep.createdAt,
-                    });
-                  }
-                });
+                // Only take messages explicitly sent by ADMIN
+                serverReplies
+                  .filter((rep) => rep.sender === 'ADMIN')
+                  .forEach((rep) => {
+                    if (!existingAdminReplyIds.has(rep.id)) {
+                      hasNew = true;
+                      newBubbles.push({
+                        id: rep.id,
+                        sender: 'ADMIN',
+                        senderName: rep.senderName || 'Gujju AI Studio Support',
+                        text: rep.text,
+                        createdAt: rep.createdAt || new Date().toISOString(),
+                      });
+                    }
+                  });
 
                 if (hasNew) {
                   localStorage.setItem('gujju_client_chat_history', JSON.stringify(newBubbles));
@@ -129,15 +144,46 @@ export default function FloatingSupportWidget() {
     return () => clearInterval(pollInterval);
   }, [isOpen, activeMessageId]);
 
+  // Generate instant intelligent bot reply for common questions
+  const getInstantBotResponse = (text: string): string => {
+    const lower = text.toLowerCase();
+    if (lower.includes('price') || lower.includes('pricing') || lower.includes('cost') || lower.includes('rate')) {
+      return `💡 **AI Video Ads Pricing**:\n• **Starter Reel (15-30s)**: ₹1,999 (~$29) - 1 AI Model + Script + Voiceover\n• **Pro Growth (30-60s)**: ₹3,999 (~$49) - Cinematic multi-scene + Viral hooks\n• **Monthly Scale Bundle**: Custom Discounted Packages\n\n⚡ Delivery in 48 hours. Our team has received your message and will also follow up shortly!`;
+    }
+    if (lower.includes('delivery') || lower.includes('time') || lower.includes('turnaround') || lower.includes('2-day')) {
+      return `⚡ **Fast 48-Hour Turnaround**:\n1. Send product photos/details.\n2. We script & generate high-converting AI footage & studio voiceover.\n3. Final ready-to-post 9:16 reels delivered in 48 hours with revisions included!\n\nOur team will review your inquiry shortly.`;
+    }
+    if (lower.includes('whatsapp') || lower.includes('phone') || lower.includes('call') || lower.includes('number')) {
+      return `📲 **Direct WhatsApp Support**:\nYou can reach our creative team directly on WhatsApp at **+91 99252 63558** for instant script approval and custom orders.`;
+    }
+    return `✨ Thanks for reaching out! We've received your inquiry. Our team typically replies within 15-30 minutes. You can also tap the WhatsApp button above for instant real-time discussion!`;
+  };
+
   // Handle Quick Chip click
   const handleQuickChip = (text: string) => {
     setInputMessage(text);
   };
 
+  // Clear chat history
+  const handleResetChat = () => {
+    const defaultBubble: ChatBubble = {
+      id: 'welcome-bot-msg',
+      sender: 'BOT',
+      senderName: 'Gujju AI Studio Support',
+      text: 'Hi there! 👋 Welcome to Gujju AI Studio. How can we help you create viral AI product reels or scale your brand today?',
+      createdAt: new Date().toISOString(),
+    };
+    setChatBubbles([defaultBubble]);
+    localStorage.removeItem('gujju_client_chat_history');
+    localStorage.removeItem('gujju_client_active_msg_id');
+    setActiveMessageId(null);
+  };
+
   // Submit user message in live chat
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, directText?: string) => {
     if (e) e.preventDefault();
-    if (!inputMessage.trim()) return;
+    const textToSend = (directText || inputMessage).trim();
+    if (!textToSend) return;
 
     // If user info is not present, prompt for info first
     if (!userName.trim() || !userContact.trim()) {
@@ -145,15 +191,14 @@ export default function FloatingSupportWidget() {
       return;
     }
 
-    const currentText = inputMessage.trim();
     setInputMessage('');
     setSending(true);
 
     const newBubble: ChatBubble = {
       id: `user-${Date.now()}`,
       sender: 'USER',
-      senderName: userName,
-      text: currentText,
+      senderName: userName || 'Customer',
+      text: textToSend,
       subject: inquiryTopic,
       createdAt: new Date().toISOString(),
     };
@@ -164,6 +209,23 @@ export default function FloatingSupportWidget() {
     localStorage.setItem('gujju_client_name', userName);
     localStorage.setItem('gujju_client_contact', userContact);
 
+    // Provide instant automated bot assistance
+    setTimeout(() => {
+      const botResponseText = getInstantBotResponse(textToSend);
+      const botBubble: ChatBubble = {
+        id: `bot-reply-${Date.now()}`,
+        sender: 'BOT',
+        senderName: 'Gujju AI Assistant',
+        text: botResponseText,
+        createdAt: new Date().toISOString(),
+      };
+      setChatBubbles((prev) => {
+        const next = [...prev, botBubble];
+        localStorage.setItem('gujju_client_chat_history', JSON.stringify(next));
+        return next;
+      });
+    }, 600);
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -172,7 +234,7 @@ export default function FloatingSupportWidget() {
           name: userName,
           email: userContact,
           subject: inquiryTopic,
-          message: currentText,
+          message: textToSend,
         }),
       });
 
@@ -231,6 +293,17 @@ export default function FloatingSupportWidget() {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Reset / Clear Chat Button */}
+                <button
+                  type="button"
+                  onClick={handleResetChat}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors flex items-center justify-center"
+                  title="Start Fresh / Clear Chat"
+                  aria-label="Clear Chat"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Direct WhatsApp Chat Action */}
                 <a
                   href={WHATSAPP_URL}
@@ -268,24 +341,27 @@ export default function FloatingSupportWidget() {
               {/* Chat Bubbles */}
               {chatBubbles.map((bubble) => {
                 const isUser = bubble.sender === 'USER';
+                const isBot = bubble.sender === 'BOT';
 
                 return (
                   <div
                     key={bubble.id}
-                    className={`flex flex-col ${isUser ? 'items-end ml-auto' : 'items-start mr-auto'} max-w-[85%] space-y-1 animate-in fade-in`}
+                    className={`flex flex-col ${isUser ? 'items-end ml-auto' : 'items-start mr-auto'} max-w-[88%] space-y-1 animate-in fade-in`}
                   >
                     {/* Message Bubble */}
                     <div
                       className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-md ${
                         isUser
                           ? 'bg-gradient-to-tr from-brand-600 to-brand-500 text-white rounded-tr-sm shadow-brand-500/20'
+                          : isBot
+                          ? 'bg-[#121a29] border border-[#1e2e48] text-gray-100 rounded-tl-sm shadow-cyan-900/10'
                           : 'bg-[#182234] border border-[#27354f] text-gray-100 rounded-tl-sm'
                       }`}
                     >
                       {!isUser && (
-                        <div className="text-[10px] font-extrabold text-accent-cyan uppercase tracking-wider flex items-center gap-1 mb-1">
-                          <Sparkles className="w-3 h-3" />
-                          {bubble.senderName || 'Gujju AI Studio Support'}
+                        <div className="text-[10px] font-extrabold text-accent-cyan uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                          <Sparkles className="w-3 h-3 text-cyan-400" />
+                          {bubble.senderName || (isBot ? 'Gujju AI Assistant' : 'Gujju AI Studio Support')}
                         </div>
                       )}
                       
@@ -295,7 +371,7 @@ export default function FloatingSupportWidget() {
                         </div>
                       )}
 
-                      <p>{bubble.text}</p>
+                      <p className="leading-relaxed">{bubble.text}</p>
                     </div>
 
                     {/* Timestamp & Status */}
@@ -363,17 +439,17 @@ export default function FloatingSupportWidget() {
 
             {/* 3. Quick Action Chips */}
             {!showUserInfoPrompt && (
-              <div className="px-3.5 py-2 bg-[#090D16] border-t border-surface-200/50 flex items-center gap-2 overflow-x-auto text-[11px] shrink-0">
+              <div className="px-3.5 py-2 bg-[#090D16] border-t border-surface-200/50 flex items-center gap-2 overflow-x-auto text-[11px] shrink-0 scrollbar-none">
                 <button
                   type="button"
-                  onClick={() => handleQuickChip('I want to create AI video ads for my brand. What is the pricing?')}
+                  onClick={() => handleSendMessage(undefined, 'I want to create AI video ads for my brand. What is the pricing?')}
                   className="px-2.5 py-1 rounded-lg bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-300 hover:text-white shrink-0 transition-colors"
                 >
                   🚀 AI Video Pricing
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickChip('How does the 2-day delivery process work?')}
+                  onClick={() => handleSendMessage(undefined, 'How does the 2-day delivery process work?')}
                   className="px-2.5 py-1 rounded-lg bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-300 hover:text-white shrink-0 transition-colors"
                 >
                   ⚡ 2-Day Delivery
@@ -397,7 +473,7 @@ export default function FloatingSupportWidget() {
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder={userName ? `Message as ${userName}...` : 'Type your message...'}
+                    placeholder="Type your message or inquiry..."
                     className="w-full bg-[#080B11] border border-surface-200 focus:border-brand-500 rounded-2xl py-2.5 px-3.5 text-xs text-white placeholder-gray-500 outline-none"
                   />
 
