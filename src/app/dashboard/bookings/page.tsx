@@ -448,12 +448,61 @@ export default function MyBookingsPage() {
                 <span className="font-black text-brand-400">{formatCurrencyINR(selectedBooking.price)}</span>
               </div>
 
+              {selectedBooking.websiteUrl && (
+                <div className="flex justify-between py-1 border-b border-surface-200/30">
+                  <span className="text-gray-400">Website / Profile:</span>
+                  <a href={selectedBooking.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-brand-300 hover:underline truncate max-w-[200px]">
+                    {selectedBooking.websiteUrl}
+                  </a>
+                </div>
+              )}
+
+              {selectedBooking.targetPlatforms && (
+                <div className="py-1 border-b border-surface-200/30">
+                  <span className="text-gray-400 block mb-1">Target Publishing Platforms:</span>
+                  <span className="font-bold text-white">
+                    {Array.isArray(selectedBooking.targetPlatforms)
+                      ? selectedBooking.targetPlatforms.join(', ')
+                      : selectedBooking.targetPlatforms}
+                  </span>
+                </div>
+              )}
+
+              {selectedBooking.deliveryPlatform && (
+                <div className="flex justify-between py-1 border-b border-surface-200/30">
+                  <span className="text-gray-400">Reel Delivery Platform:</span>
+                  <span className="font-bold text-white">
+                    {selectedBooking.deliveryPlatform === 'Other' && selectedBooking.deliveryPlatformOther
+                      ? `Other (${selectedBooking.deliveryPlatformOther})`
+                      : selectedBooking.deliveryPlatform}
+                  </span>
+                </div>
+              )}
+
+              {(selectedBooking.videoFormat || selectedBooking.videoStyle) && (
+                <div className="flex justify-between py-1 border-b border-surface-200/30">
+                  <span className="text-gray-400">Format & Style:</span>
+                  <span className="font-bold text-white text-right">
+                    {selectedBooking.videoFormat || '9:16 Vertical'} • {selectedBooking.videoStyle || 'Cinematic AI'}
+                  </span>
+                </div>
+              )}
+
               <div className="py-2">
                 <span className="text-gray-400 block mb-1">Product Description / Requirements:</span>
                 <p className="bg-surface-100 p-3 rounded-xl text-gray-300 whitespace-pre-wrap">
                   {selectedBooking.description}
                 </p>
               </div>
+
+              {selectedBooking.additionalInstructions && (
+                <div className="py-2">
+                  <span className="text-gray-400 block mb-1">Additional Instructions:</span>
+                  <p className="bg-surface-100/60 p-3 rounded-xl text-gray-300 italic">
+                    {selectedBooking.additionalInstructions}
+                  </p>
+                </div>
+              )}
 
               {selectedBooking.refLink && (
                 <div className="py-1">
@@ -466,6 +515,19 @@ export default function MyBookingsPage() {
                   >
                     {selectedBooking.refLink}
                   </a>
+                </div>
+              )}
+
+              {selectedBooking.imageUrls && Array.isArray(selectedBooking.imageUrls) && selectedBooking.imageUrls.length > 0 && (
+                <div className="py-2 border-t border-surface-200/30">
+                  <span className="text-gray-400 block mb-1.5">Attached Assets ({selectedBooking.imageUrls.length}):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBooking.imageUrls.map((url: string, idx: number) => (
+                      <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                        <img src={url} alt="asset" className="w-12 h-12 object-cover rounded-lg border border-surface-200 hover:scale-105 transition-transform" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
 

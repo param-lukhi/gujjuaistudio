@@ -331,8 +331,34 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
           })}
         </div>
 
+        {/* Custom Package Highlight Banner */}
+        <div className="mt-10 p-6 sm:p-8 rounded-3xl glass-panel border border-brand-500/40 bg-gradient-to-r from-brand-950/40 via-surface-100/60 to-brand-950/40 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+              <span>Tailored For Your Brand</span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-white">
+              Need a <span className="text-gradient-blue">Custom Package?</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-300 max-w-xl">
+              Choose your exact number of reels, duration (15s/30s/60s), revision tiers, and urgent 24-hour turnaround with real-time dynamic pricing.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleSelectPackage('custom')}
+            className="btn-glow px-8 py-4 rounded-2xl text-sm font-black text-white flex items-center gap-2 shadow-xl shadow-brand-500/30 shrink-0 hover:scale-105 transition-transform"
+          >
+            <Zap className="w-4 h-4 text-accent-cyan" />
+            Build Custom Package
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Guarantee Note */}
-        <div className="mt-12 p-4 rounded-2xl glass-panel border-surface-200/60 max-w-2xl mx-auto flex items-center justify-center gap-3 text-xs text-gray-300 text-center">
+        <div className="mt-8 p-4 rounded-2xl glass-panel border-surface-200/60 max-w-2xl mx-auto flex items-center justify-center gap-3 text-xs text-gray-300 text-center">
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>Need bulk reels for your agency or e-commerce store? Contact us for custom monthly retainer pricing!</span>
         </div>

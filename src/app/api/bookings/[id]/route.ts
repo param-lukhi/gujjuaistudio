@@ -70,6 +70,17 @@ export async function PUT(
     }
 
     // Admin modifications (Full control)
+    const {
+      targetPlatforms,
+      deliveryPlatform,
+      deliveryPlatformOther,
+      videoFormat,
+      videoStyle,
+      videoStyleCustom,
+      deliveryRequirement,
+      additionalInstructions,
+    } = body;
+
     const updated = await prisma.booking.update({
       where: { id },
       data: {
@@ -82,6 +93,16 @@ export async function PUT(
         ...(paymentRef !== undefined && { paymentRef }),
         ...(paymentProof !== undefined && { paymentProof }),
         ...(paymentMethod && { paymentMethod }),
+        ...(targetPlatforms !== undefined && {
+          targetPlatforms: typeof targetPlatforms === 'string' ? targetPlatforms : JSON.stringify(targetPlatforms),
+        }),
+        ...(deliveryPlatform !== undefined && { deliveryPlatform }),
+        ...(deliveryPlatformOther !== undefined && { deliveryPlatformOther }),
+        ...(videoFormat !== undefined && { videoFormat }),
+        ...(videoStyle !== undefined && { videoStyle }),
+        ...(videoStyleCustom !== undefined && { videoStyleCustom }),
+        ...(deliveryRequirement !== undefined && { deliveryRequirement }),
+        ...(additionalInstructions !== undefined && { additionalInstructions }),
       },
     });
 

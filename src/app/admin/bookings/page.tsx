@@ -744,6 +744,46 @@ export default function ManageBookingsPage() {
                   <strong>Date & Slot:</strong> {detailsModalBooking.bookingDate} ({detailsModalBooking.bookingTime})
                 </p>
 
+                {detailsModalBooking.websiteUrl && (
+                  <p className="text-gray-300">
+                    <strong>Website / Profile:</strong>{' '}
+                    <a href={detailsModalBooking.websiteUrl} target="_blank" rel="noreferrer" className="text-brand-300 hover:underline">
+                      {detailsModalBooking.websiteUrl}
+                    </a>
+                  </p>
+                )}
+
+                {detailsModalBooking.targetPlatforms && (
+                  <div className="py-1">
+                    <strong className="text-gray-400 block mb-0.5">Target Publishing Platforms:</strong>
+                    <span className="font-bold text-white">
+                      {Array.isArray(detailsModalBooking.targetPlatforms)
+                        ? detailsModalBooking.targetPlatforms.join(', ')
+                        : detailsModalBooking.targetPlatforms}
+                    </span>
+                  </div>
+                )}
+
+                {detailsModalBooking.deliveryPlatform && (
+                  <div className="py-1">
+                    <strong className="text-gray-400 block mb-0.5">Reel Delivery Platform (Where to send client):</strong>
+                    <span className="font-bold text-emerald-400">
+                      {detailsModalBooking.deliveryPlatform === 'Other' && detailsModalBooking.deliveryPlatformOther
+                        ? `Other (${detailsModalBooking.deliveryPlatformOther})`
+                        : detailsModalBooking.deliveryPlatform}
+                    </span>
+                  </div>
+                )}
+
+                {(detailsModalBooking.videoFormat || detailsModalBooking.videoStyle) && (
+                  <div className="py-1">
+                    <strong className="text-gray-400 block mb-0.5">Format & Style:</strong>
+                    <span className="font-bold text-white">
+                      {detailsModalBooking.videoFormat || '9:16 Vertical'} • {detailsModalBooking.videoStyle || 'Cinematic AI'}
+                    </span>
+                  </div>
+                )}
+
                 {/* Payment verification control */}
                 <div className="p-3 bg-surface-100/90 rounded-2xl border border-surface-200/80 space-y-2">
                   <div className="flex items-center justify-between">
@@ -784,12 +824,32 @@ export default function ManageBookingsPage() {
                   <p className="text-gray-200 whitespace-pre-wrap">{detailsModalBooking.description}</p>
                 </div>
 
+                {detailsModalBooking.additionalInstructions && (
+                  <div className="p-3 bg-surface-100/60 rounded-xl space-y-1">
+                    <span className="text-gray-400 font-bold block">Additional Instructions:</span>
+                    <p className="text-gray-300 italic">{detailsModalBooking.additionalInstructions}</p>
+                  </div>
+                )}
+
                 {detailsModalBooking.refLink && (
                   <div className="pt-1">
                     <span className="text-gray-400 font-bold block">Reference URL:</span>
                     <a href={detailsModalBooking.refLink} target="_blank" rel="noreferrer" className="text-brand-400 hover:underline break-all">
                       {detailsModalBooking.refLink}
                     </a>
+                  </div>
+                )}
+
+                {detailsModalBooking.imageUrls && Array.isArray(detailsModalBooking.imageUrls) && detailsModalBooking.imageUrls.length > 0 && (
+                  <div className="pt-2 border-t border-surface-200/40">
+                    <span className="text-gray-400 font-bold block mb-1.5">Attached Product Assets ({detailsModalBooking.imageUrls.length}):</span>
+                    <div className="flex flex-wrap gap-2">
+                      {detailsModalBooking.imageUrls.map((url: string, idx: number) => (
+                        <a key={idx} href={url} target="_blank" rel="noreferrer">
+                          <img src={url} alt="asset" className="w-12 h-12 object-cover rounded-lg border border-surface-200 hover:scale-105 transition-transform" />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

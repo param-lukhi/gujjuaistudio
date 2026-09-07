@@ -107,30 +107,40 @@ model PortfolioItem {
 }
 
 model Booking {
-  id            String   @id @default(uuid())
-  bookingRef    String   @unique
-  userId        String?
-  clientName    String
-  businessName  String
-  clientEmail   String
-  clientPhone   String
-  packageId     String   // starter, professional, premium
-  packageName   String
-  price         Int
-  description   String
-  refLink       String?
-  imageUrls     String   @default("[]") // JSON stringified array of upload URLs
-  status        String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
-  paymentStatus String   @default("UNPAID") // UNPAID, PENDING_VERIFICATION, PAID
-  paymentRef    String?  // UPI UTR or Transaction ID
-  paymentProof  String?  // Screenshot URL
-  paymentMethod String   @default("UPI") // UPI, GPAY, PHONEPE, PAYTM
-  bookingDate   String?
-  bookingTime   String?
-  finalVideoUrl String?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  bookingRef             String   @unique
+  userId                 String?
+  clientName             String
+  businessName           String
+  clientEmail            String
+  clientPhone            String
+  websiteUrl             String?
+  packageId              String   // starter, professional, premium, custom
+  packageName            String
+  price                  Int
+  description            String
+  targetPlatforms        String?  // JSON stringified array or comma-separated list
+  deliveryPlatform       String?  // WhatsApp, Email, Google Drive, WeTransfer, Other
+  deliveryPlatformOther  String?  // If Other selected
+  videoFormat            String?  // 9:16 Portrait, 16:9 Landscape, 1:1 Square
+  videoStyle             String?  // Cinematic, Product Advertisement, Social Media, Minimal, Custom
+  videoStyleCustom       String?  // Custom style description
+  deliveryRequirement    String?  @default("Standard Delivery") // Standard Delivery, Urgent Delivery
+  additionalInstructions String?
+  customOptions          String?  // JSON string for custom configurations (reels, duration, revisions)
+  refLink                String?
+  imageUrls              String   @default("[]") // JSON stringified array of upload URLs
+  status                 String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
+  paymentStatus          String   @default("UNPAID") // UNPAID, PENDING_VERIFICATION, PAID
+  paymentRef             String?  // UPI UTR or Transaction ID
+  paymentProof           String?  // Screenshot URL
+  paymentMethod          String   @default("UPI") // UPI, GPAY, PHONEPE, PAYTM
+  bookingDate            String?
+  bookingTime            String?
+  finalVideoUrl          String?
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

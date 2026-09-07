@@ -81,10 +81,20 @@ export async function POST(request: Request) {
       businessName,
       clientEmail,
       clientPhone,
+      websiteUrl,
       packageId,
       packageName,
       price,
       description,
+      targetPlatforms,
+      deliveryPlatform,
+      deliveryPlatformOther,
+      videoFormat,
+      videoStyle,
+      videoStyleCustom,
+      deliveryRequirement,
+      additionalInstructions,
+      customOptions,
       refLink,
       imageUrls,
       bookingDate,
@@ -99,9 +109,16 @@ export async function POST(request: Request) {
     const email = (clientEmail || session.user.email || '').toLowerCase().trim();
     const phone = clientPhone || session.user.phoneNumber || '';
 
-    if (!description || !bookingDate || !bookingTime) {
+    if (!description) {
       return NextResponse.json(
-        { error: 'Service description, booking date, and time slot are required.' },
+        { error: 'Project / Product description is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!deliveryPlatform) {
+      return NextResponse.json(
+        { error: 'Please select where you would like to receive the final AI Reel (Delivery Platform).' },
         { status: 400 }
       );
     }
@@ -116,14 +133,24 @@ export async function POST(request: Request) {
         businessName: businessName || session.user.businessName || name,
         clientEmail: email,
         clientPhone: phone,
+        websiteUrl: websiteUrl || null,
         packageId: packageId || 'professional',
         packageName: packageName || '🥈 Professional Package',
         price: Number(price) || 1200,
         description,
+        targetPlatforms: typeof targetPlatforms === 'string' ? targetPlatforms : JSON.stringify(targetPlatforms || []),
+        deliveryPlatform: deliveryPlatform || 'Google Drive',
+        deliveryPlatformOther: deliveryPlatformOther || null,
+        videoFormat: videoFormat || '9:16 Portrait',
+        videoStyle: videoStyle || 'Cinematic',
+        videoStyleCustom: videoStyleCustom || null,
+        deliveryRequirement: deliveryRequirement || 'Standard Delivery',
+        additionalInstructions: additionalInstructions || null,
+        customOptions: typeof customOptions === 'string' ? customOptions : JSON.stringify(customOptions || null),
         refLink: refLink || null,
         imageUrls: JSON.stringify(imageUrls || []),
-        bookingDate,
-        bookingTime,
+        bookingDate: bookingDate || new Date().toISOString().split('T')[0],
+        bookingTime: bookingTime || 'Flexible Slot',
         status: 'PENDING',
         paymentStatus: paymentStatus || (paymentRef ? 'PENDING_VERIFICATION' : 'UNPAID'),
         paymentRef: paymentRef || null,
