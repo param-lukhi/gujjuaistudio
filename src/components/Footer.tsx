@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Instagram, Youtube, Phone, Mail, MapPin, ArrowUpRight } from 'lucide-react';
+import { Sparkles, Phone, Mail, MapPin, ArrowUpRight } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -25,20 +25,6 @@ export default function Footer() {
             <p className="text-sm text-gray-400 leading-relaxed">
               Crafting high-converting, scroll-stopping AI product video reels for Indian e-commerce, D2C brands, and restaurants.
             </p>
-            <div className="flex items-center gap-3 pt-2">
-              <a
-                href="https://www.instagram.com/gujju__ai__studio/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-pink-400 hover:border-pink-500 transition-colors"
-                title="Follow us on Instagram (@gujju__ai__studio)"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center text-gray-300 hover:text-white hover:border-brand-500 transition-colors">
-                <Youtube className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
           {/* Quick Links */}
