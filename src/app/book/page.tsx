@@ -52,37 +52,53 @@ const PACKAGES: Record<string, {
   features: string[];
 }> = {
   starter: {
-    name: 'Starter AI Reel',
+    name: 'Starter Package',
     badge: '🥉 Starter',
     price: 600,
     duration: 'Up to 15 Seconds',
     desc: 'Perfect for quick Instagram Reels & TikTok hooks with AI-generated visuals.',
-    features: ['1080p HD Format', '1 AI Voiceover / Audio Sync', '48-hour delivery', '1 Revision'],
+    features: [
+      '1 AI Product Reel',
+      'Up to 15 Seconds',
+      '1 Revision',
+      'Delivery in 2 Days',
+      '1080p HD Vertical Reel Format',
+      'E-commerce Product Highlight',
+    ],
   },
   professional: {
-    name: 'Professional Reel',
+    name: 'Professional Package',
     badge: '🥈 Most Popular',
     price: 1200,
-    duration: 'Up to 30 Seconds',
+    duration: 'Up to 30 Seconds Each',
     desc: 'Cinematic AI model showcase with multiple scene transitions and high conversion script.',
-    features: ['1080p HD Vertical 9:16', 'Cinematic Visual Transitions', 'Scriptwriting + Voiceover', '2 Revisions', 'Thumbnail Included'],
+    features: [
+      '1 AI Product Reel',
+      'Up to 30 Seconds Each',
+      'AI Voiceover (Hindi / English / Gujarati)',
+      'Commercial Use License',
+      '1 Revision',
+      'Delivery in 2 Days',
+      '4K Crisp Vertical Reel Format',
+    ],
   },
   premium: {
-    name: 'Premium Campaign',
+    name: 'Premium Package',
     badge: '🥇 Premium Quality',
     price: 2300,
-    duration: 'Up to 60 Seconds',
+    duration: 'Up to 60 Seconds Each',
     desc: 'Full-length 4K commercial-grade AI ad with lifelike avatars, VFX, and multi-format exports.',
-    features: ['4K Ultra HD Export', 'Multi-Angle AI Rendering', 'Professional Script + Voiceover', 'Unlimited Minor Revisions', 'Instagram + YouTube Format'],
+    features: [
+      '1 AI Product Reel',
+      'Up to 60 Seconds Each',
+      'AI Voiceover',
+      'Background Music',
+      '1 Revision',
+      'Delivery in 2 Days',
+      'Cinematic AI VFX & Dynamic Scripting',
+      'Full Commercial Rights',
+    ],
   },
-  custom: {
-    name: 'Custom AI Commercial',
-    badge: '🚀 Bespoke Brand',
-    price: 3500,
-    duration: 'Custom Length',
-    desc: 'Tailored brand story with custom model training, multi-scene storyboarding, and voice cloning.',
-    features: ['Custom AI Model & Styling', 'Multi-scene Storyboarding', 'Express 24-48h Delivery', 'Full Commercial Rights', 'Dedicated Creative Director'],
-  }
 };
 
 const TIME_SLOTS = [
@@ -97,13 +113,22 @@ function BookingWizard() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  const pkgFromUrl = searchParams.get('package') || 'professional';
+  const pkgParam = searchParams.get('package');
+  const pkgFromUrl = pkgParam && PACKAGES[pkgParam] ? pkgParam : 'professional';
 
-  // Wizard Step: 1: Service, 2: Date & Slot, 3: Details & Uploads, 4: Confirm, 5: Payment, 6: Success
-  const [currentStep, setCurrentStep] = useState(1);
+  // If user arrived by selecting a package from /pricing, directly start on Step 2 (Date & Slot)
+  const [currentStep, setCurrentStep] = useState(pkgParam ? 2 : 1);
 
   // Form State
   const [selectedPackage, setSelectedPackage] = useState(pkgFromUrl);
+
+  // Update selectedPackage if query param changes
+  useEffect(() => {
+    if (pkgParam && PACKAGES[pkgParam]) {
+      setSelectedPackage(pkgParam);
+      setCurrentStep(2);
+    }
+  }, [pkgParam]);
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -351,45 +376,51 @@ function BookingWizard() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(PACKAGES).map(([key, pkg]) => {
               const isSelected = selectedPackage === key;
               return (
                 <div
                   key={key}
-                  onClick={() => setSelectedPackage(key)}
-                  className={`p-5 rounded-2xl border cursor-pointer transition-all duration-200 relative ${
+                  onClick={() => {
+                    setSelectedPackage(key);
+                  }}
+                  className={`p-5 rounded-2xl border cursor-pointer transition-all duration-200 relative flex flex-col justify-between ${
                     isSelected
                       ? 'bg-brand-950/40 border-brand-500 shadow-xl shadow-brand-500/10 ring-2 ring-brand-500/40'
                       : 'bg-surface-100/40 border-surface-200/60 hover:border-surface-200 hover:bg-surface-100/80'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-500/20 text-brand-300 border border-brand-500/30 mb-2">
-                        {pkg.badge}
-                      </span>
-                      <h3 className="font-bold text-white text-base">{pkg.name}</h3>
-                      <p className="text-xs text-gray-400 mt-1">{pkg.desc}</p>
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-500/20 text-brand-300 border border-brand-500/30 mb-2">
+                          {pkg.badge}
+                        </span>
+                        <h3 className="font-bold text-white text-base">{pkg.name}</h3>
+                        <p className="text-xs text-gray-400 mt-1">{pkg.desc}</p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xl font-black text-brand-400">
+
+                    <div className="mt-3 mb-3">
+                      <span className="text-2xl font-black text-brand-400">
                         {formatCurrencyINR(pkg.price)}
                       </span>
+                      <span className="text-[11px] text-gray-400 ml-1">/ reel</span>
                       <p className="text-[10px] text-gray-500">{pkg.duration}</p>
                     </div>
+
+                    <ul className="space-y-1.5 border-t border-surface-200/40 pt-3">
+                      {pkg.features.map((feat, i) => (
+                        <li key={i} className="text-xs text-gray-300 flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
-                  <ul className="mt-4 space-y-1.5 border-t border-surface-200/40 pt-3">
-                    {pkg.features.map((feat, i) => (
-                      <li key={i} className="text-xs text-gray-300 flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-4 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-surface-200/30 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-400">
                       {isSelected ? '✓ Selected' : 'Click to select'}
                     </span>
@@ -420,6 +451,30 @@ function BookingWizard() {
       {/* STEP 2: SELECT DATE & TIME SLOT */}
       {currentStep === 2 && (
         <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6 animate-in fade-in duration-200">
+          
+          {/* Selected Package Banner */}
+          <div className="p-4 rounded-2xl bg-brand-950/60 border border-brand-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-brand-500/10">
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-xl bg-brand-500/20 text-brand-300 font-extrabold text-xs border border-brand-500/30">
+                {activePackage.badge}
+              </span>
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base">{activePackage.name}</h3>
+                <p className="text-[11px] text-gray-400">{activePackage.duration} • 2-Day Turnaround</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 self-end sm:self-center">
+              <span className="text-lg font-black text-emerald-400">{formatCurrencyINR(activePackage.price)}</span>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(1)}
+                className="px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-brand-300 hover:text-white text-xs font-semibold border border-brand-500/30 transition-all"
+              >
+                Change Package
+              </button>
+            </div>
+          </div>
+
           <div className="border-b border-surface-200/50 pb-4">
             <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
               <Calendar className="w-6 h-6 text-brand-400" />
