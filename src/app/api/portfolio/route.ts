@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, item });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating portfolio reel:', error);
-    return NextResponse.json({ error: 'Failed to create portfolio item' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to create portfolio item' }, { status: 500 });
   }
 }

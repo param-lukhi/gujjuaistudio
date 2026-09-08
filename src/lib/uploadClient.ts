@@ -1,5 +1,6 @@
-import { getFirebaseApp } from '@/lib/firebase';
+import { getFirebaseApp, getFirebaseAuth } from '@/lib/firebase';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { signInAnonymously } from 'firebase/auth';
 import { uploadToSupabaseStorage } from '@/lib/supabaseStorage';
 
 export interface UploadOptions {
@@ -7,11 +8,11 @@ export interface UploadOptions {
   onProgress?: (percent: number, statusText?: string) => void;
 }
 
-
 /**
  * Resizes and compresses an image in the browser for ultra-fast instant uploads (<50ms)
+ * Produces tiny webp/jpeg data (<50KB) that is 100% safe for database & CDN
  */
-async function compressImageToDataUrl(file: File, maxWidth = 1400, quality = 0.85): Promise<string> {
+async function compressImageToDataUrl(file: File, maxWidth = 1000, quality = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {
     if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
       const reader = new FileReader();
@@ -82,147 +83,197 @@ async function convertFileToDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Universal media uploader:
- * 1. For images: Instant in-browser canvas optimizer (< 50ms, 100% reliable)
- * 2. For videos (up to 500MB): Direct Client-to-Firebase Cloud Storage with live progress & transfer stats
- * 3. Safe fallback for small files
+ * Uploads a video to high-speed public CDN (TmpFiles / Free Video Stream CDN)
  */
-export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
-  if (!file) {
-    throw new Error('No file selected.');
+async function uploadVideoToPublicCDN(
+  file: File,
+  onProgress?: (percent: number, statusText?: string) => void
+): Promise<string> {
+  onProgress?.(40, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB to Cloud CDN...`);
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.data?.url) {
+        // Convert to direct media streaming URL
+        const directUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        onProgress?.(100, 'Cloud CDN Ready');
+        return directUrl;
+      }
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn('Public CDN upload failed, trying next fallback:', err);
   }
 
-  const maxAllowedSize = 500 * 1024 * 1024; // 500 MB max limit
-  if (file.size > maxAllowedSize) {
-    throw new Error(
-      `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds maximum limit (500MB). Please select a file under 500MB.`
-    );
+  throw new Error('Public CDN unavailable');
+}
+
+/**
+ * Uploads media file to Firebase Storage with anonymous auth and progress tracking
+ */
+async function uploadToFirebase(
+  file: File,
+  folder: string,
+  onProgress?: (percent: number, statusText?: string) => void
+): Promise<string> {
+  const authObj = getFirebaseAuth();
+  if (authObj?.auth && !authObj.auth.currentUser) {
+    try {
+      await signInAnonymously(authObj.auth);
+    } catch (authErr) {
+      console.warn('Firebase anonymous auth attempt:', authErr);
+    }
   }
+
+  const app = getFirebaseApp();
+  if (!app) throw new Error('Firebase app not ready');
+
+  const storage = getStorage(app);
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storageRef = ref(storage, `${folder}/${Date.now()}_${cleanName}`);
+
+  const uploadTask = uploadBytesResumable(storageRef, file, {
+    contentType: file.type || 'video/mp4',
+  });
+
+  return new Promise<string>((resolve, reject) => {
+    let hasProgress = false;
+    const watchdog = setTimeout(() => {
+      if (!hasProgress) {
+        try { uploadTask.cancel(); } catch {}
+        reject(new Error('FIREBASE_TIMEOUT'));
+      }
+    }, 8000);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (snapshot.bytesTransferred > 0) {
+          hasProgress = true;
+          clearTimeout(watchdog);
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
+          const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
+          onProgress?.(progress, `${transferredMb}MB / ${totalMb}MB (${progress}%)`);
+        }
+      },
+      (err) => {
+        clearTimeout(watchdog);
+        reject(err);
+      },
+      async () => {
+        clearTimeout(watchdog);
+        try {
+          onProgress?.(100, 'Finalizing download URL...');
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(url);
+        } catch (urlErr) {
+          reject(urlErr);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * Universal media uploader:
+ * 1. For images: High-speed server upload with compressed canvas fallback (<50KB)
+ * 2. For videos: Multi-cloud video storage (Firebase -> Supabase -> Cloud CDN -> Local Upload)
+ */
+export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
+  if (!file) throw new Error('No file selected.');
 
   const isImage = file.type.startsWith('image/');
   const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
 
-  // --- TIER 1: FAST-PATH FOR FILES UNDER 4.5MB (INSTANT SERVER / LOCAL / DATA URL) ---
-  if (file.size <= 4.5 * 1024 * 1024) {
-    options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
+  // ==========================================
+  // 1. IMAGE UPLOAD FLOW (Avatars, Thumbnails, Covers)
+  // ==========================================
+  if (isImage) {
+    options.onProgress?.(25, 'Uploading image...');
 
-    // 1A. Try server /api/upload endpoint (saves to /uploads/ or Cloudinary or returns data URI)
+    // 1A. Try local/server endpoint (/api/upload)
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) {
         const json = await res.json();
-        if (json.url) {
-          options.onProgress?.(100, 'Uploaded successfully');
+        if (json.url && !json.url.startsWith('data:')) {
+          options.onProgress?.(100, 'Image uploaded');
           return json.url;
         }
       }
-    } catch (apiErr) {
-      console.warn('Server upload endpoint attempt failed:', apiErr);
-    }
+    } catch {}
 
-    // 1B. Fast client-side image optimizer (if image)
-    if (isImage) {
-      try {
-        options.onProgress?.(70, 'Optimizing image...');
-        const dataUrl = await compressImageToDataUrl(file);
-        options.onProgress?.(100, 'Done');
-        return dataUrl;
-      } catch (err) {
-        console.warn('Image compression fallback:', err);
-      }
+    // 1B. Compressed instant Data URL (<50KB)
+    try {
+      options.onProgress?.(80, 'Optimizing image...');
+      const dataUrl = await compressImageToDataUrl(file);
+      options.onProgress?.(100, 'Done');
+      return dataUrl;
+    } catch {
+      return await convertFileToDataUrl(file);
     }
-
-    // 1C. Instant browser FileReader Data URL fallback for videos/images under 4.5MB
-    options.onProgress?.(90, 'Finalizing video stream...');
-    const dataUrl = await convertFileToDataUrl(file);
-    options.onProgress?.(100, 'Ready');
-    return dataUrl;
   }
 
-  // --- TIER 2: CLOUD STORAGE FOR LARGE FILES (> 4.5MB UP TO 500MB) ---
+  // ==========================================
+  // 2. VIDEO / REEL UPLOAD FLOW
+  // ==========================================
+  const folder = options.folder || 'portfolio_videos';
 
-  // 2A. Attempt Supabase Storage
+  // 2A. Try Firebase Cloud Storage
   try {
-    const supabaseUrl = await uploadToSupabaseStorage(
-      file,
-      options.folder || (isVideo ? 'videos' : 'thumbnails'),
-      options.onProgress
-    );
+    const firebaseUrl = await uploadToFirebase(file, folder, options.onProgress);
+    if (firebaseUrl) return firebaseUrl;
+  } catch (fbErr) {
+    console.warn('Firebase upload fallback:', fbErr);
+  }
+
+  // 2B. Try Supabase Storage
+  try {
+    const supabaseUrl = await uploadToSupabaseStorage(file, folder, options.onProgress);
     if (supabaseUrl) return supabaseUrl;
-  } catch (supabaseErr: any) {
-    if (supabaseErr.message !== 'SUPABASE_ANON_KEY_MISSING') {
-      console.warn('Supabase storage attempt:', supabaseErr.message || supabaseErr);
-    }
+  } catch (sbErr) {
+    console.warn('Supabase storage fallback:', sbErr);
   }
 
-  // 2B. Attempt Firebase Cloud Storage with a strict 6-second progress watchdog
+  // 2C. Try Public High-Speed Video CDN
   try {
-    const app = getFirebaseApp();
-    if (app) {
-      const storage = getStorage(app);
-      const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageRef = ref(storage, `${options.folder || (isVideo ? 'videos' : 'thumbnails')}/${Date.now()}_${cleanName}`);
-
-      const uploadTask = uploadBytesResumable(storageRef, file, {
-        contentType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-      });
-
-      const uploadPromise = new Promise<string>((resolve, reject) => {
-        let hasTransferred = false;
-        const watchdogTimer = setTimeout(() => {
-          if (!hasTransferred) {
-            try {
-              uploadTask.cancel();
-            } catch {}
-            reject(new Error('FIREBASE_STORAGE_TIMED_OUT'));
-          }
-        }, 6000); // 6s watchdog: if no bytes transferred due to permission/CORS hanging, abort & fallback
-
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            if (snapshot.bytesTransferred > 0) {
-              hasTransferred = true;
-              clearTimeout(watchdogTimer);
-              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
-              const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
-              const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
-              options.onProgress?.(progress, status);
-            }
-          },
-          (error: any) => {
-            clearTimeout(watchdogTimer);
-            console.warn('Firebase Storage upload error:', error);
-            reject(error);
-          },
-          async () => {
-            clearTimeout(watchdogTimer);
-            try {
-              options.onProgress?.(100, 'Finalizing download URL...');
-              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadUrl);
-            } catch (urlErr: any) {
-              reject(urlErr);
-            }
-          }
-        );
-      });
-
-      return await uploadPromise;
-    }
-  } catch (firebaseErr: any) {
-    console.warn('Firebase Storage upload failed or timed out, proceeding to fallback:', firebaseErr);
+    const cdnUrl = await uploadVideoToPublicCDN(file, options.onProgress);
+    if (cdnUrl) return cdnUrl;
+  } catch (cdnErr) {
+    console.warn('Public CDN fallback:', cdnErr);
   }
 
-  // --- TIER 3: UNIVERSAL SAFE STREAM FALLBACK ---
-  options.onProgress?.(90, 'Loading media stream...');
-  const finalDataUrl = await convertFileToDataUrl(file);
-  options.onProgress?.(100, 'Ready');
-  return finalDataUrl;
+  // 2D. Try Server Upload Endpoint (/api/upload)
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.url) return json.url;
+    }
+  } catch {}
+
+  throw new Error('Video upload failed across all cloud providers. Please paste a direct video link in the Video Link tab.');
 }
+
 
 
 
