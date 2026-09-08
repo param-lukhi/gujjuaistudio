@@ -15,8 +15,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const mimeType = file.type || (file.name.toLowerCase().endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
+    const fileName = file.name || 'uploaded_media';
+    const lowerName = fileName.toLowerCase();
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    let mimeType = file.type;
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      if (lowerName.endsWith('.mp3')) mimeType = 'audio/mpeg';
+      else if (lowerName.endsWith('.wav')) mimeType = 'audio/wav';
+      else if (lowerName.endsWith('.m4a')) mimeType = 'audio/mp4';
+      else if (lowerName.endsWith('.aac')) mimeType = 'audio/aac';
+      else if (lowerName.endsWith('.ogg') || lowerName.endsWith('.opus')) mimeType = 'audio/ogg';
+      else if (lowerName.endsWith('.webm') || lowerName.endsWith('.weba')) mimeType = 'audio/webm';
+      else if (lowerName.endsWith('.mp4')) mimeType = 'video/mp4';
+      else if (lowerName.endsWith('.mov')) mimeType = 'video/quicktime';
+      else if (lowerName.endsWith('.png')) mimeType = 'image/png';
+      else if (lowerName.endsWith('.webp')) mimeType = 'image/webp';
+      else mimeType = 'image/jpeg';
+    }
 
     // 1. If Cloudinary keys are configured, attempt Cloudinary upload
     if (

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/providers/ToastProvider';
+import { uploadMediaFile } from '@/lib/uploadClient';
 import {
   Send,
   Paperclip,
@@ -19,7 +20,10 @@ import {
   User,
   Search,
   Volume2,
-  FileText
+  FileText,
+  Loader2,
+  Square,
+  Music
 } from 'lucide-react';
 
 export default function SingleChatPage() {
@@ -32,14 +36,22 @@ export default function SingleChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Real voice recording states
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+  const generalFileInputRef = useRef<HTMLInputElement>(null);
 
   const user = session?.user;
 
@@ -106,22 +118,111 @@ export default function SingleChatPage() {
     }
   };
 
-  // Simulated Voice Note Recording
-  const startVoiceRecording = () => {
-    setIsRecordingVoice(true);
-    setRecordingTime(0);
-    timerRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1);
-    }, 1000);
+  // Real Voice Note Recording with Browser MediaRecorder
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecordingVoice(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Microphone permission error:', err);
+      showToast('Please allow microphone permissions to record audio', 'error');
+    }
   };
 
-  const stopVoiceRecordingAndSend = () => {
+  const stopVoiceRecordingAndSend = async () => {
     clearInterval(timerRef.current);
     setIsRecordingVoice(false);
-    // Attach simulated voice note link
-    const demoAudioUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
-    handleSendMessage(demoAudioUrl);
-    showToast('Voice note attached!', 'success');
+
+    if (!mediaRecorderRef.current) return;
+
+    setUploadingMedia(true);
+
+    mediaRecorderRef.current.onstop = async () => {
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+
+        const audioUrl = await uploadMediaFile(audioFile, {
+          folder: 'voice_notes',
+        });
+
+        if (audioUrl) {
+          await handleSendMessage(audioUrl);
+          showToast('🎙️ Voice note sent successfully!', 'success');
+        }
+      } catch (uploadErr: any) {
+        console.error('Audio upload error:', uploadErr);
+        showToast('Failed to upload voice note', 'error');
+      } finally {
+        setUploadingMedia(false);
+        // Stop all microphone tracks
+        if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+        }
+      }
+    };
+
+    mediaRecorderRef.current.stop();
+  };
+
+  // Direct Audio File Upload
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingMedia(true);
+    try {
+      const audioUrl = await uploadMediaFile(file, { folder: 'audio_uploads' });
+      if (audioUrl) {
+        await handleSendMessage(audioUrl);
+        showToast('🎵 Audio file attached and sent!', 'success');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to upload audio file', 'error');
+    } finally {
+      setUploadingMedia(false);
+      if (audioFileInputRef.current) audioFileInputRef.current.value = '';
+    }
+  };
+
+  // General File / Document / Image Upload
+  const handleGeneralFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingMedia(true);
+    try {
+      const url = await uploadMediaFile(file, { folder: 'chat_attachments' });
+      if (url) {
+        if (file.type.startsWith('audio/')) {
+          await handleSendMessage(url);
+        } else {
+          setFileUrl(url);
+        }
+        showToast('File attached successfully!', 'success');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to upload file', 'error');
+    } finally {
+      setUploadingMedia(false);
+      if (generalFileInputRef.current) generalFileInputRef.current.value = '';
+    }
   };
 
   const filteredMessages = messages.filter((m) =>
@@ -132,6 +233,22 @@ export default function SingleChatPage() {
     <DashboardLayout>
       <div className="glass-panel rounded-3xl border border-surface-200/80 shadow-2xl flex flex-col h-[75vh] overflow-hidden">
         
+        {/* Hidden inputs for file and audio selection */}
+        <input
+          type="file"
+          ref={audioFileInputRef}
+          accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.webm"
+          onChange={handleAudioFileUpload}
+          className="hidden"
+        />
+        <input
+          type="file"
+          ref={generalFileInputRef}
+          accept="image/*,.pdf,.doc,.docx,.zip,audio/*"
+          onChange={handleGeneralFileUpload}
+          className="hidden"
+        />
+
         {/* Chat Room Top Bar */}
         <div className="p-4 sm:p-5 bg-surface-100/60 border-b border-surface-200/60 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -214,12 +331,14 @@ export default function SingleChatPage() {
                       </a>
                     )}
 
-                    {/* Voice Note */}
+                    {/* Audio Voice Note */}
                     {msg.voiceNoteUrl && (
-                      <div className="flex items-center gap-3 p-2 rounded-xl bg-black/20 text-white">
-                        <Volume2 className="w-4 h-4 text-accent-cyan animate-pulse" />
-                        <span className="text-[11px] font-mono">🎙️ Audio Voice Note</span>
-                        <audio controls src={msg.voiceNoteUrl} className="h-6 w-36 text-xs" />
+                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-black/30 text-white border border-white/15">
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-accent-cyan">
+                          <Volume2 className="w-4 h-4 animate-pulse" />
+                          <span>🎙️ Audio Voice Note</span>
+                        </div>
+                        <audio controls src={msg.voiceNoteUrl} className="w-full h-8 text-xs rounded-lg" />
                       </div>
                     )}
 
@@ -277,27 +396,38 @@ export default function SingleChatPage() {
               <Smile className="w-4 h-4" />
             </button>
 
-            {/* File Attachment trigger prompt */}
+            {/* General File Attachment */}
             <button
               type="button"
-              onClick={() => {
-                const url = prompt('Enter File or Image URL to attach:');
-                if (url) setFileUrl(url);
-              }}
+              onClick={() => generalFileInputRef.current?.click()}
               className="p-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 text-gray-300 hover:text-accent-cyan transition-all"
-              title="Attach File URL"
+              title="Attach File or Image"
             >
               <Paperclip className="w-4 h-4" />
             </button>
 
-            {/* Voice Note Button */}
-            {isRecordingVoice ? (
+            {/* Audio File Upload Button */}
+            <button
+              type="button"
+              onClick={() => audioFileInputRef.current?.click()}
+              className="p-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 text-gray-300 hover:text-emerald-400 transition-all"
+              title="Upload Audio / MP3 File"
+            >
+              <Music className="w-4 h-4" />
+            </button>
+
+            {/* Voice Note Record / Stop Button */}
+            {uploadingMedia ? (
+              <div className="px-3 py-2 rounded-xl bg-surface-200 text-xs text-brand-300 flex items-center gap-1.5 font-bold">
+                <Loader2 className="w-4 h-4 animate-spin" /> Uploading audio...
+              </div>
+            ) : isRecordingVoice ? (
               <button
                 type="button"
                 onClick={stopVoiceRecordingAndSend}
-                className="px-3 py-2 rounded-xl bg-rose-600 animate-pulse text-xs font-bold text-white flex items-center gap-1.5"
+                className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 animate-pulse text-xs font-bold text-white flex items-center gap-1.5"
               >
-                <Mic className="w-4 h-4" /> Stop & Send ({recordingTime}s)
+                <Square className="w-3.5 h-3.5 fill-white" /> Stop & Send ({recordingTime}s)
               </button>
             ) : (
               <button
@@ -329,10 +459,10 @@ export default function SingleChatPage() {
             <button
               type="button"
               onClick={() => handleSendMessage()}
-              disabled={sending}
-              className="btn-glow px-4 py-2.5 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-brand-500/20"
+              disabled={sending || uploadingMedia}
+              className="btn-glow px-4 py-2.5 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-brand-500/20 disabled:opacity-50"
             >
-              <Send className="w-4 h-4" />
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               <span className="hidden sm:inline">Send</span>
             </button>
           </div>

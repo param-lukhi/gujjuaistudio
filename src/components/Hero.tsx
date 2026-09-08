@@ -338,6 +338,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black">
                 {heroData.videoUrl && (
                   <video
+                    id="hero-reel-video"
                     key={heroData.videoUrl}
                     src={heroData.videoUrl}
                     autoPlay
@@ -349,18 +350,37 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                 )}
 
                 {/* Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/35 flex flex-col justify-between p-4 sm:p-5">
-                  <div className="flex items-center justify-between">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/35 flex flex-col justify-between p-4 sm:p-5 pointer-events-none">
+                  <div className="flex items-center justify-between pointer-events-auto">
                     <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-brand-600/85 backdrop-blur-md text-white border border-brand-400/40 flex items-center gap-1.5 shadow-md">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                       {heroData.badgeText || 'AI Reel Demo'}
                     </span>
-                    <span className="text-[11px] sm:text-xs font-mono text-gray-300 bg-black/60 px-2 sm:px-2.5 py-1 rounded-md border border-white/10">
-                      {heroData.durationText || '00:30'}
-                    </span>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const vid = document.getElementById('hero-reel-video') as HTMLVideoElement;
+                          if (vid) {
+                            vid.muted = !vid.muted;
+                            const btn = document.getElementById('sound-btn-text');
+                            if (btn) btn.innerText = vid.muted ? '🔇 Muted' : '🔊 Sound On';
+                          }
+                        }}
+                        className="px-2 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold border border-white/20 transition-all flex items-center gap-1 cursor-pointer shadow-lg"
+                      >
+                        <span id="sound-btn-text">🔇 Muted</span>
+                      </button>
+
+                      <span className="text-[11px] sm:text-xs font-mono text-gray-300 bg-black/60 px-2 sm:px-2.5 py-1 rounded-md border border-white/10">
+                        {heroData.durationText || '00:30'}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 pointer-events-auto">
                     <div className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-accent-violet/85 text-white shadow-sm">
                       {heroData.category || 'Fashion & Luxury'}
                     </div>

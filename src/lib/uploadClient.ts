@@ -77,21 +77,39 @@ async function convertFileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function detectFileMimeType(file: File | Blob, fallbackName = 'media_file'): string {
+  if (file.type && file.type !== 'application/octet-stream') return file.type;
+  const name = ('name' in file ? file.name : fallbackName).toLowerCase();
+  if (name.endsWith('.mp3')) return 'audio/mpeg';
+  if (name.endsWith('.wav')) return 'audio/wav';
+  if (name.endsWith('.m4a')) return 'audio/mp4';
+  if (name.endsWith('.aac')) return 'audio/aac';
+  if (name.endsWith('.ogg')) return 'audio/ogg';
+  if (name.endsWith('.weba') || name.endsWith('.webm')) return 'audio/webm';
+  if (name.endsWith('.mp4')) return 'video/mp4';
+  if (name.endsWith('.mov')) return 'video/quicktime';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.webp')) return 'image/webp';
+  return 'application/octet-stream';
+}
+
 /**
  * Uploads large video/audio/image files in 2MB chunks.
  * This completely bypasses Vercel's 4.5MB Serverless Function payload limit,
- * allowing 10MB, 50MB, 100MB+ videos with 100% reliable real-time progress.
+ * allowing 10MB, 50MB, 100MB+ media files with 100% reliable real-time progress.
  */
 async function uploadMediaInChunks(
-  file: File,
+  file: File | Blob,
   options: UploadOptions = {}
 ): Promise<string> {
   const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB per chunk (Vercel limit is 4.5MB)
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const uploadId = `upl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   const totalMb = (file.size / (1024 * 1024)).toFixed(1);
+  const fileName = 'name' in file ? file.name : `audio_recording_${Date.now()}.mp3`;
+  const mimeType = detectFileMimeType(file, fileName);
 
-  options.onProgress?.(5, `Preparing ${totalMb}MB video upload (${totalChunks} chunks)...`);
+  options.onProgress?.(5, `Preparing ${totalMb}MB media upload (${totalChunks} chunks)...`);
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
     const start = chunkIndex * CHUNK_SIZE;
@@ -102,8 +120,8 @@ async function uploadMediaInChunks(
     formData.append('uploadId', uploadId);
     formData.append('chunkIndex', chunkIndex.toString());
     formData.append('totalChunks', totalChunks.toString());
-    formData.append('fileName', file.name);
-    formData.append('mimeType', file.type || 'video/mp4');
+    formData.append('fileName', fileName);
+    formData.append('mimeType', mimeType);
     formData.append('chunk', chunkBlob);
 
     let attempts = 0;
@@ -130,14 +148,13 @@ async function uploadMediaInChunks(
 
         const data = await res.json();
         if (data.complete && data.url) {
-          options.onProgress?.(100, 'Video processed & ready!');
+          options.onProgress?.(100, 'Media processed & ready!');
           return data.url;
         }
 
         success = true;
       } catch (err) {
         lastError = err;
-        // Wait 500ms before retry
         await new Promise((r) => setTimeout(r, 500 * attempts));
       }
     }
@@ -155,17 +172,20 @@ async function uploadMediaInChunks(
 /**
  * Universal media uploader:
  * 1. For images: High-speed server upload or compressed canvas (<50KB)
- * 2. For videos/files:
- *    - If <= 3MB: Fast single POST to /api/upload
- *    - If > 3MB: Resilient Chunked Uploading to /api/upload/chunk (No 4.5MB limit!)
+ * 2. For audio files (MP3, WAV, M4A, OGG, AAC, WebM): Direct /api/upload with chunked fallback
+ * 3. For video files (MP4, MOV, WEBM): Direct /api/upload or resilient 2MB Chunked Uploading
  */
-export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
+export async function uploadMediaFile(file: File | Blob, options: UploadOptions = {}): Promise<string> {
   if (!file) throw new Error('No file selected.');
 
+  const fileName = 'name' in file ? file.name : 'media_file';
   const isImage = file.type.startsWith('image/');
   const isVideo =
     file.type.startsWith('video/') ||
-    /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
+    /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(fileName);
+  const isAudio =
+    file.type.startsWith('audio/') ||
+    /\.(mp3|wav|m4a|aac|ogg|opus|flac|wma|weba)$/i.test(fileName);
 
   // If file is larger than 3MB, always use resilient Chunked Uploading
   if (file.size > 3 * 1024 * 1024) {
@@ -176,12 +196,12 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   try {
     options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file, fileName);
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
     if (res.ok) {
       const json = await res.json();
       if (json.url) {
-        options.onProgress?.(100, isVideo ? 'Video ready' : 'Image uploaded');
+        options.onProgress?.(100, isAudio ? 'Audio uploaded' : isVideo ? 'Video ready' : 'Image uploaded');
         return json.url;
       }
     }
@@ -189,13 +209,13 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     console.warn('Standard /api/upload attempt failed, falling back:', apiErr);
   }
 
-  // If standard upload failed on a small video/media, try chunked upload
-  if (isVideo || file.size > 1024 * 1024) {
+  // If standard upload failed on audio or video, try chunked upload
+  if (isVideo || isAudio || file.size > 1024 * 1024) {
     return await uploadMediaInChunks(file, options);
   }
 
   // Fallback for images: Instant Canvas Compression (<50KB)
-  if (isImage) {
+  if (isImage && file instanceof File) {
     try {
       options.onProgress?.(80, 'Optimizing image...');
       const dataUrl = await compressImageToDataUrl(file);
