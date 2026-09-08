@@ -3,26 +3,74 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Sparkles, Play, ArrowRight, ShieldCheck, Zap, Award, Star } from 'lucide-react';
+import { 
+  Sparkles, Play, ArrowRight, ShieldCheck, Zap, Award, Star, 
+  Check, Headphones, Film, Video, Eye, ThumbsUp, Flame 
+} from 'lucide-react';
 import { useAuthModal } from './providers/AuthModalContext';
 
-interface HeroShowcaseData {
-  badgeText: string;
-  durationText: string;
-  category: string;
-  title: string;
-  description: string;
-  videoUrl: string;
+export interface HeroShowcaseData {
+  // Left Hero Copy
+  heroTopPill?: string;
+  heroHeadlineMain?: string;
+  heroHeadlineGradient?: string;
+  heroSubheadline?: string;
+  heroCtaText?: string;
+  heroCtaLink?: string;
+  heroSecondaryText?: string;
+  heroSecondaryLink?: string;
+  
+  // Key Stats Counters
+  stat1Value?: string;
+  stat1Label?: string;
+  stat2Value?: string;
+  stat2Label?: string;
+  stat3Value?: string;
+  stat3Label?: string;
+  trustText?: string;
+
+  // 9:16 Video Reel Card
+  badgeText?: string;
+  durationText?: string;
+  category?: string;
+  title?: string;
+  description?: string;
+  videoUrl?: string;
   thumbnailUrl?: string;
-  buttonText: string;
-  buttonLink: string;
-  floatingBadge1Title: string;
-  floatingBadge1Sub: string;
-  floatingBadge2Title: string;
-  floatingBadge2Sub: string;
+  buttonText?: string;
+  buttonLink?: string;
+
+  // Floating Badge 1 (Top-Left)
+  floatingBadge1Title?: string;
+  floatingBadge1Sub?: string;
+  floatingBadge1Icon?: string;
+  floatingBadge1Color?: string;
+
+  // Floating Badge 2 (Bottom-Right)
+  floatingBadge2Title?: string;
+  floatingBadge2Sub?: string;
+  floatingBadge2Icon?: string;
+  floatingBadge2Color?: string;
 }
 
 const DEFAULT_HERO: HeroShowcaseData = {
+  heroTopPill: 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery',
+  heroHeadlineMain: 'AI Product Ads That',
+  heroHeadlineGradient: 'Stop the Scroll.',
+  heroSubheadline: 'Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.',
+  heroCtaText: 'Book Your AI Reel Now',
+  heroCtaLink: '/book',
+  heroSecondaryText: 'Watch Portfolio',
+  heroSecondaryLink: '/portfolio',
+  
+  stat1Value: '2 Days',
+  stat1Label: 'Guaranteed Delivery',
+  stat2Value: '₹600',
+  stat2Label: 'Starter Packages',
+  stat3Value: '10x CTR',
+  stat3Label: 'Instagram Boost',
+  trustText: '4.9/5 by 150+ Brands',
+
   badgeText: 'AI Reel Demo',
   durationText: '00:30',
   category: 'Fashion & Luxury',
@@ -31,11 +79,60 @@ const DEFAULT_HERO: HeroShowcaseData = {
   videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
   buttonText: 'View All 7 Categories',
   buttonLink: '/portfolio',
+  
   floatingBadge1Title: 'Commercial Rights',
   floatingBadge1Sub: '100% Monetization',
+  floatingBadge1Icon: 'check',
+  floatingBadge1Color: 'emerald',
+
   floatingBadge2Title: 'AI Voiceover',
   floatingBadge2Sub: 'Hindi & English',
+  floatingBadge2Icon: 'zap',
+  floatingBadge2Color: 'brand',
 };
+
+// Helper for rendering dynamic icon for floating badge
+function renderBadgeIcon(iconKey?: string) {
+  switch (iconKey) {
+    case 'shield':
+      return <ShieldCheck className="w-4 h-4" />;
+    case 'sparkles':
+      return <Sparkles className="w-4 h-4" />;
+    case 'zap':
+      return <Zap className="w-4 h-4" />;
+    case 'star':
+      return <Star className="w-4 h-4" />;
+    case 'headphones':
+      return <Headphones className="w-4 h-4" />;
+    case 'film':
+    case 'video':
+      return <Video className="w-4 h-4" />;
+    case 'flame':
+      return <Flame className="w-4 h-4" />;
+    case 'check':
+    default:
+      return <Check className="w-4 h-4" />;
+  }
+}
+
+// Helper for color styles
+function getBadgeColorStyles(colorKey?: string) {
+  switch (colorKey) {
+    case 'cyan':
+      return 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/40';
+    case 'violet':
+      return 'bg-accent-violet/20 text-accent-violet border-accent-violet/40';
+    case 'amber':
+      return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+    case 'rose':
+      return 'bg-rose-500/20 text-rose-400 border-rose-500/40';
+    case 'brand':
+      return 'bg-brand-500/20 text-brand-400 border-brand-500/40';
+    case 'emerald':
+    default:
+      return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+  }
+}
 
 export default function Hero({ initialData }: { initialData?: HeroShowcaseData }) {
   const { data: session } = useSession();
@@ -47,8 +144,8 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
     fetch('/api/admin/hero')
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.title) {
-          setHeroData(data);
+        if (data && (data.title || data.heroHeadlineMain)) {
+          setHeroData((prev) => ({ ...prev, ...data }));
         }
       })
       .catch(() => {});
@@ -58,8 +155,8 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
     if (!session?.user) {
       e.preventDefault();
       requireAuth(() => {
-        window.location.href = '/book';
-      }, '/book');
+        window.location.href = heroData.heroCtaLink || '/book';
+      }, heroData.heroCtaLink || '/book');
     }
   };
 
@@ -79,56 +176,57 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
             {/* Top Pill Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border-brand-500/30 text-xs font-semibold text-brand-400 shadow-lg shadow-brand-500/10">
               <Sparkles className="w-3.5 h-3.5 text-brand-300 animate-pulse" />
-              <span>Next-Gen AI Product Video Ads</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-400"></span>
-              <span className="text-gray-300">Fast 2-Day Delivery</span>
+              <span>{heroData.heroTopPill || 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery'}</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1]">
-              AI Product Ads That <br />
-              <span className="text-gradient-blue">Stop the Scroll.</span>
+              {heroData.heroHeadlineMain || 'AI Product Ads That'}{' '}
+              <br />
+              <span className="text-gradient-blue">
+                {heroData.heroHeadlineGradient || 'Stop the Scroll.'}
+              </span>
             </h1>
 
             {/* Short Intro */}
             <p className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
-              Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.
+              {heroData.heroSubheadline || 'Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.'}
             </p>
 
             {/* Stat Counters / Highlights */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 max-w-lg mx-auto lg:mx-0">
               <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-lg sm:text-2xl font-black text-white">2 Days</div>
-                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Guaranteed Delivery</div>
+                <div className="text-lg sm:text-2xl font-black text-white">{heroData.stat1Value || '2 Days'}</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat1Label || 'Guaranteed Delivery'}</div>
               </div>
               <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-lg sm:text-2xl font-black text-brand-400">₹600</div>
-                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Starter Packages</div>
+                <div className="text-lg sm:text-2xl font-black text-brand-400">{heroData.stat2Value || '₹600'}</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat2Label || 'Starter Packages'}</div>
               </div>
               <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-lg sm:text-2xl font-black text-emerald-400">10x CTR</div>
-                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">Instagram Boost</div>
+                <div className="text-lg sm:text-2xl font-black text-emerald-400">{heroData.stat3Value || '10x CTR'}</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat3Label || 'Instagram Boost'}</div>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
               <Link
-                href="/book"
+                href={heroData.heroCtaLink || '/book'}
                 onClick={handleProtectedBookClick}
                 className="btn-glow w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold text-white shadow-xl shadow-brand-500/30 hover:scale-105 transition-all flex items-center justify-center gap-3"
               >
                 <Sparkles className="w-5 h-5 text-brand-300" />
-                Book Your AI Reel Now
+                {heroData.heroCtaText || 'Book Your AI Reel Now'}
                 <ArrowRight className="w-5 h-5" />
               </Link>
 
               <Link
-                href="/portfolio"
+                href={heroData.heroSecondaryLink || '/portfolio'}
                 className="w-full sm:w-auto px-7 py-4 rounded-xl text-base font-semibold text-gray-200 hover:text-white glass-panel hover:bg-surface-100/90 border border-surface-200/80 transition-all flex items-center justify-center gap-2"
               >
                 <Play className="w-4 h-4 text-brand-400 fill-brand-400" />
-                Watch Portfolio
+                {heroData.heroSecondaryText || 'Watch Portfolio'}
               </Link>
             </div>
 
@@ -145,8 +243,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                     <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
                   ))}
                 </div>
-                <span className="font-semibold text-white">4.9/5</span>
-                <span>by 150+ Brands</span>
+                <span className="font-semibold text-white">{heroData.trustText || '4.9/5 by 150+ Brands'}</span>
               </div>
             </div>
 
@@ -206,8 +303,8 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
 
               {/* Floating Badge 1 (Top-Left) */}
               <div className="absolute top-2 left-2 sm:-top-4 sm:-left-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  ✓
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorStyles(heroData.floatingBadge1Color)}`}>
+                  {renderBadgeIcon(heroData.floatingBadge1Icon)}
                 </div>
                 <div>
                   <div className="text-[11px] sm:text-xs font-bold text-white">
@@ -221,8 +318,8 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
 
               {/* Floating Badge 2 (Bottom-Right) */}
               <div className="absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20" style={{ animationDelay: '2s' }}>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorStyles(heroData.floatingBadge2Color)}`}>
+                  {renderBadgeIcon(heroData.floatingBadge2Icon || 'zap')}
                 </div>
                 <div>
                   <div className="text-[11px] sm:text-xs font-bold text-white">

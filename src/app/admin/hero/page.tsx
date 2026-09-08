@@ -5,17 +5,21 @@ import AdminSidebar from '@/components/AdminSidebar';
 import { 
   Sparkles, Save, Upload, Link2, Play, Eye, 
   Loader2, CheckCircle2, AlertCircle, RefreshCw, 
-  Layers, ExternalLink, Zap, ShieldCheck, Film, Image as ImageIcon
+  Layers, ExternalLink, Zap, ShieldCheck, Film, 
+  Star, Check, Headphones, Video, Flame, Layout, BarChart3,
+  Sliders, Palette
 } from 'lucide-react';
 import Link from 'next/link';
 import { uploadMediaFile } from '@/lib/uploadClient';
-
 
 export default function AdminHeroPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Active Editor Tab
+  const [activeTab, setActiveTab] = useState<'reel' | 'badges' | 'copy' | 'stats'>('reel');
 
   // Video input mode: 'upload' | 'url'
   const [videoMode, setVideoMode] = useState<'upload' | 'url'>('url');
@@ -25,6 +29,26 @@ export default function AdminHeroPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
+    // Left Hero Copy
+    heroTopPill: 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery',
+    heroHeadlineMain: 'AI Product Ads That',
+    heroHeadlineGradient: 'Stop the Scroll.',
+    heroSubheadline: 'Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.',
+    heroCtaText: 'Book Your AI Reel Now',
+    heroCtaLink: '/book',
+    heroSecondaryText: 'Watch Portfolio',
+    heroSecondaryLink: '/portfolio',
+    
+    // Key Stats Counters
+    stat1Value: '2 Days',
+    stat1Label: 'Guaranteed Delivery',
+    stat2Value: '₹600',
+    stat2Label: 'Starter Packages',
+    stat3Value: '10x CTR',
+    stat3Label: 'Instagram Boost',
+    trustText: '4.9/5 by 150+ Brands',
+
+    // 9:16 Video Reel Card
     badgeText: 'AI Reel Demo',
     durationText: '00:30',
     category: 'Fashion & Luxury',
@@ -34,10 +58,18 @@ export default function AdminHeroPage() {
     thumbnailUrl: '',
     buttonText: 'View All 7 Categories',
     buttonLink: '/portfolio',
+
+    // Floating Badge 1 (Top-Left)
     floatingBadge1Title: 'Commercial Rights',
     floatingBadge1Sub: '100% Monetization',
+    floatingBadge1Icon: 'check',
+    floatingBadge1Color: 'emerald',
+
+    // Floating Badge 2 (Bottom-Right)
     floatingBadge2Title: 'AI Voiceover',
     floatingBadge2Sub: 'Hindi & English',
+    floatingBadge2Icon: 'zap',
+    floatingBadge2Color: 'brand',
   });
 
   const categoriesList = [
@@ -51,27 +83,33 @@ export default function AdminHeroPage() {
     'Automotive & Real Estate',
   ];
 
+  const iconOptions = [
+    { value: 'check', label: 'Checkmark', icon: Check },
+    { value: 'shield', label: 'Shield / Guarantee', icon: ShieldCheck },
+    { value: 'zap', label: 'Lightning / Fast', icon: Zap },
+    { value: 'sparkles', label: 'Sparkles / AI', icon: Sparkles },
+    { value: 'star', label: 'Star / Rating', icon: Star },
+    { value: 'headphones', label: 'Voiceover / Audio', icon: Headphones },
+    { value: 'video', label: 'Video / Reel', icon: Video },
+    { value: 'flame', label: 'Trending / Hot', icon: Flame },
+  ];
+
+  const colorOptions = [
+    { value: 'emerald', label: 'Emerald Green', bgClass: 'bg-emerald-500' },
+    { value: 'cyan', label: 'Cyan Blue', bgClass: 'bg-cyan-500' },
+    { value: 'violet', label: 'Violet Purple', bgClass: 'bg-purple-500' },
+    { value: 'amber', label: 'Amber Gold', bgClass: 'bg-amber-500' },
+    { value: 'rose', label: 'Rose Pink', bgClass: 'bg-rose-500' },
+    { value: 'brand', label: 'Brand Blue', bgClass: 'bg-blue-600' },
+  ];
+
   const fetchHeroData = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/hero');
       const data = await res.json();
       if (data) {
-        setFormData({
-          badgeText: data.badgeText || 'AI Reel Demo',
-          durationText: data.durationText || '00:30',
-          category: data.category || 'Fashion & Luxury',
-          title: data.title || 'Luxury Silk Saree AI Showcase',
-          description: data.description || 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.',
-          videoUrl: data.videoUrl || 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
-          thumbnailUrl: data.thumbnailUrl || '',
-          buttonText: data.buttonText || 'View All 7 Categories',
-          buttonLink: data.buttonLink || '/portfolio',
-          floatingBadge1Title: data.floatingBadge1Title || 'Commercial Rights',
-          floatingBadge1Sub: data.floatingBadge1Sub || '100% Monetization',
-          floatingBadge2Title: data.floatingBadge2Title || 'AI Voiceover',
-          floatingBadge2Sub: data.floatingBadge2Sub || 'Hindi & English',
-        });
+        setFormData((prev) => ({ ...prev, ...data }));
       }
     } catch (err) {
       console.error(err);
@@ -108,7 +146,7 @@ export default function AdminHeroPage() {
       });
 
       setFormData((prev) => ({ ...prev, videoUrl: url }));
-      setSuccessMsg('Reel video uploaded & attached successfully!');
+      setSuccessMsg('🎉 Reel video uploaded & attached successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error uploading video');
@@ -119,7 +157,6 @@ export default function AdminHeroPage() {
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
-
 
   // Save changes to database
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,12 +175,36 @@ export default function AdminHeroPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save changes');
 
-      setSuccessMsg('🎉 Hero Reel Showcase updated and published to Homepage successfully!');
+      setSuccessMsg('🎉 Hero Section & Badges updated and published to Homepage successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save hero changes');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const renderBadgeIcon = (iconKey: string) => {
+    const found = iconOptions.find((o) => o.value === iconKey);
+    const IconComp = found ? found.icon : Check;
+    return <IconComp className="w-4 h-4" />;
+  };
+
+  const getBadgeColorClass = (colorKey: string) => {
+    switch (colorKey) {
+      case 'cyan':
+        return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40';
+      case 'violet':
+        return 'bg-purple-500/20 text-purple-400 border-purple-500/40';
+      case 'amber':
+        return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+      case 'rose':
+        return 'bg-rose-500/20 text-rose-400 border-rose-500/40';
+      case 'brand':
+        return 'bg-blue-600/20 text-blue-400 border-blue-600/40';
+      case 'emerald':
+      default:
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
     }
   };
 
@@ -158,10 +219,10 @@ export default function AdminHeroPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
               <Sparkles className="w-7 h-7 text-brand-400" />
-              Hero Reel Showcase Editor
+              Complete Hero Section & Badge Editor
             </h1>
-            <p className="text-xs text-gray-400">
-              Customize the interactive 9:16 AI Reel video, title, category, descriptions, and floating badges displayed on the homepage hero section.
+            <p className="text-xs text-gray-400 mt-1">
+              Customize everything on your homepage hero: 9:16 Reel, Floating Badges 1 & 2, Headlines, Descriptions, and Stats.
             </p>
           </div>
 
@@ -171,7 +232,7 @@ export default function AdminHeroPage() {
               target="_blank"
               className="px-4 py-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold"
             >
-              <span>View Homepage</span>
+              <span>View Live Homepage</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
@@ -200,287 +261,648 @@ export default function AdminHeroPage() {
           </div>
         )}
 
+        {/* NAVIGATION TABS */}
+        <div className="flex flex-wrap gap-2 p-1.5 bg-surface-100/80 rounded-2xl border border-surface-200/80">
+          <button
+            type="button"
+            onClick={() => setActiveTab('reel')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'reel'
+                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
+            }`}
+          >
+            <Film className="w-4 h-4" />
+            <span>1. 9:16 Hero Reel & Video</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('badges')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'badges'
+                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>2. Floating Badges (Badge 1 & 2)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('copy')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'copy'
+                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
+            }`}
+          >
+            <Layout className="w-4 h-4" />
+            <span>3. Hero Headlines & Buttons</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('stats')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'stats'
+                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>4. Key Stats Counters & Ratings</span>
+          </button>
+        </div>
+
         {/* 2-COLUMN SPLIT: CONTROLS & LIVE PREVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LEFT: FORM CONTROLS (7 Cols) */}
           <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
             
-            {/* 1. Main Reel Details Card */}
-            <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
-              <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
-                <Film className="w-4 h-4 text-brand-400" />
-                Hero Reel Content & Titles
-              </h3>
+            {/* TAB 1: 9:16 HERO REEL & VIDEO */}
+            {activeTab === 'reel' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
+                  <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
+                    <Film className="w-4 h-4 text-brand-400" />
+                    Hero Reel Details & Overlay Text
+                  </h3>
 
-              <div className="space-y-4">
-                {/* Category & Top Badge */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Category Tag *</label>
-                    <input
-                      type="text"
-                      name="category"
-                      required
-                      value={formData.category}
-                      onChange={handleChange}
-                      placeholder="e.g. Fashion & Luxury"
-                      list="categories-options"
-                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 font-semibold"
-                    />
-                    <datalist id="categories-options">
-                      {categoriesList.map((cat) => (
-                        <option key={cat} value={cat} />
-                      ))}
-                    </datalist>
+                  <div className="space-y-4">
+                    {/* Category & Top Badge */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-300">Category Tag *</label>
+                        <input
+                          type="text"
+                          name="category"
+                          required
+                          value={formData.category}
+                          onChange={handleChange}
+                          placeholder="e.g. Fashion & Luxury"
+                          list="categories-options"
+                          className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 font-semibold"
+                        />
+                        <datalist id="categories-options">
+                          {categoriesList.map((cat) => (
+                            <option key={cat} value={cat} />
+                          ))}
+                        </datalist>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-300">Top Left Pill Badge</label>
+                        <input
+                          type="text"
+                          name="badgeText"
+                          value={formData.badgeText}
+                          onChange={handleChange}
+                          placeholder="e.g. AI Reel Demo"
+                          className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Showcase Title */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Hero Reel Title *</label>
+                      <input
+                        type="text"
+                        name="title"
+                        required
+                        value={formData.title}
+                        onChange={handleChange}
+                        placeholder="e.g. Luxury Silk Saree AI Showcase"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm font-bold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Description Subtitle *</label>
+                      <textarea
+                        rows={3}
+                        name="description"
+                        required
+                        value={formData.description}
+                        onChange={handleChange}
+                        placeholder="e.g. Generated purely from 2 flat product photos..."
+                        className="w-full p-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 resize-none leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Duration Badge & Button Link */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-300">Duration Timer</label>
+                        <input
+                          type="text"
+                          name="durationText"
+                          value={formData.durationText}
+                          onChange={handleChange}
+                          placeholder="e.g. 00:30"
+                          className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-300">Button CTA Text</label>
+                        <input
+                          type="text"
+                          name="buttonText"
+                          value={formData.buttonText}
+                          onChange={handleChange}
+                          placeholder="e.g. View All 7 Categories"
+                          className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Button Redirect Link</label>
+                      <input
+                        type="text"
+                        name="buttonLink"
+                        value={formData.buttonLink}
+                        onChange={handleChange}
+                        placeholder="e.g. /portfolio or /book"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video Media Source Card */}
+                <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
+                  <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
+                    <Play className="w-4 h-4 text-accent-cyan" />
+                    Video Media Source
+                  </h3>
+
+                  {/* Toggle Video Input Mode */}
+                  <div className="grid grid-cols-2 p-1 bg-surface-100 rounded-2xl border border-surface-200/80 max-w-xs">
+                    <button
+                      type="button"
+                      onClick={() => setVideoMode('url')}
+                      className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        videoMode === 'url'
+                          ? 'bg-brand-600 text-white shadow-md'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      Video URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVideoMode('upload')}
+                      className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        videoMode === 'upload'
+                          ? 'bg-brand-600 text-white shadow-md'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Upload Video File
+                    </button>
                   </div>
 
+                  {videoMode === 'url' ? (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Direct Video URL (MP4 / WebM / Cloudinary / Streaming) *</label>
+                      <input
+                        type="url"
+                        name="videoUrl"
+                        required
+                        value={formData.videoUrl}
+                        onChange={handleChange}
+                        placeholder="https://assets.mixkit.co/.../video.mp4"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="file"
+                        ref={videoInputRef}
+                        accept="video/*"
+                        onChange={handleVideoUpload}
+                        className="hidden"
+                      />
+                      <div
+                        onClick={() => !uploadingVideo && videoInputRef.current?.click()}
+                        className="border-2 border-dashed border-surface-200/80 hover:border-brand-500/80 rounded-2xl p-6 text-center cursor-pointer bg-surface-100/40 hover:bg-surface-100/70 transition-all space-y-2"
+                      >
+                        {uploadingVideo ? (
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
+                            <p className="text-xs font-bold text-white">
+                              {uploadStatus || `Uploading video in high-speed chunks... (${uploadProgress}%)`}
+                            </p>
+                            {uploadProgress > 0 && (
+                              <div className="w-56 bg-surface-200 h-2 rounded-full overflow-hidden mx-auto mt-2">
+                                <div
+                                  className="bg-brand-500 h-full rounded-full transition-all duration-300 shadow-sm shadow-brand-400"
+                                  style={{ width: `${uploadProgress}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-brand-400 mx-auto" />
+                            <p className="text-xs font-bold text-white">Click to Upload Any Video File (No Size Limits / Chunked Upload)</p>
+                            <p className="text-[11px] text-gray-400">MP4, MOV, WEBM (Vertical 9:16 Recommended)</p>
+                          </>
+                        )}
+                      </div>
+
+                      {formData.videoUrl && (
+                        <p className="text-[11px] text-emerald-400 font-mono truncate">
+                          ✓ Active Video: {formData.videoUrl}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: FLOATING BADGES (BADGE 1 & 2) */}
+            {activeTab === 'badges' && (
+              <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-6">
+                <div>
+                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    Customize Floating Badges (1 & 2)
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Edit the floating glass badges that animate on the top-left and bottom-right of the 9:16 phone mockup.
+                  </p>
+                </div>
+
+                {/* Floating Badge 1 Configuration */}
+                <div className="space-y-4 p-5 rounded-2xl bg-surface-100/70 border border-emerald-500/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      Floating Badge 1 (Top-Left Position)
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300">
+                      Live Dynamic
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Title *</label>
+                      <input
+                        type="text"
+                        name="floatingBadge1Title"
+                        required
+                        value={formData.floatingBadge1Title}
+                        onChange={handleChange}
+                        placeholder="Commercial Rights"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs font-bold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Subtitle *</label>
+                      <input
+                        type="text"
+                        name="floatingBadge1Sub"
+                        required
+                        value={formData.floatingBadge1Sub}
+                        onChange={handleChange}
+                        placeholder="100% Monetization"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Icon & Color Selector for Badge 1 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Icon</label>
+                      <select
+                        name="floatingBadge1Icon"
+                        value={formData.floatingBadge1Icon}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      >
+                        {iconOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Color Theme</label>
+                      <select
+                        name="floatingBadge1Color"
+                        value={formData.floatingBadge1Color}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      >
+                        {colorOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Badge 2 Configuration */}
+                <div className="space-y-4 p-5 rounded-2xl bg-surface-100/70 border border-brand-500/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-brand-400 flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      Floating Badge 2 (Bottom-Right Position)
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300">
+                      Live Dynamic
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Title *</label>
+                      <input
+                        type="text"
+                        name="floatingBadge2Title"
+                        required
+                        value={formData.floatingBadge2Title}
+                        onChange={handleChange}
+                        placeholder="AI Voiceover"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs font-bold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Subtitle *</label>
+                      <input
+                        type="text"
+                        name="floatingBadge2Sub"
+                        required
+                        value={formData.floatingBadge2Sub}
+                        onChange={handleChange}
+                        placeholder="Hindi & English"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Icon & Color Selector for Badge 2 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Icon</label>
+                      <select
+                        name="floatingBadge2Icon"
+                        value={formData.floatingBadge2Icon}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      >
+                        {iconOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Color Theme</label>
+                      <select
+                        name="floatingBadge2Color"
+                        value={formData.floatingBadge2Color}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                      >
+                        {colorOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: HERO LEFT HEADLINES & BUTTONS */}
+            {activeTab === 'copy' && (
+              <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
+                <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
+                  <Layout className="w-4 h-4 text-purple-400" />
+                  Hero Left Headlines, Tagline & Action Buttons
+                </h3>
+
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Top Left Pill Badge</label>
+                    <label className="text-xs font-bold text-gray-300">Top Pill Tagline</label>
                     <input
                       type="text"
-                      name="badgeText"
-                      value={formData.badgeText}
+                      name="heroTopPill"
+                      value={formData.heroTopPill}
                       onChange={handleChange}
-                      placeholder="e.g. AI Reel Demo"
+                      placeholder="Next-Gen AI Product Video Ads • Fast 2-Day Delivery"
                       className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
                     />
                   </div>
-                </div>
 
-                {/* Showcase Title */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-300">Hero Reel Title *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    required
-                    value={formData.title}
-                    onChange={handleChange}
-                    placeholder="e.g. Luxury Silk Saree AI Showcase"
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm font-bold focus:outline-none focus:border-brand-500"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Main Headline Prefix *</label>
+                      <input
+                        type="text"
+                        name="heroHeadlineMain"
+                        value={formData.heroHeadlineMain}
+                        onChange={handleChange}
+                        placeholder="AI Product Ads That"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm font-bold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
 
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-300">Description Subtitle *</label>
-                  <textarea
-                    rows={3}
-                    name="description"
-                    required
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="e.g. Generated purely from 2 flat product photos..."
-                    className="w-full p-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 resize-none leading-relaxed"
-                  />
-                </div>
-
-                {/* Duration Badge & Button Link */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Duration Timer</label>
-                    <input
-                      type="text"
-                      name="durationText"
-                      value={formData.durationText}
-                      onChange={handleChange}
-                      placeholder="e.g. 00:30"
-                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Gradient Highlight Headline *</label>
+                      <input
+                        type="text"
+                        name="heroHeadlineGradient"
+                        value={formData.heroHeadlineGradient}
+                        onChange={handleChange}
+                        placeholder="Stop the Scroll."
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm font-bold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Button CTA Text</label>
-                    <input
-                      type="text"
-                      name="buttonText"
-                      value={formData.buttonText}
+                    <label className="text-xs font-bold text-gray-300">Hero Subheadline Paragraph *</label>
+                    <textarea
+                      rows={3}
+                      name="heroSubheadline"
+                      value={formData.heroSubheadline}
                       onChange={handleChange}
-                      placeholder="e.g. View All 7 Categories"
-                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 font-semibold"
+                      placeholder="Transform simple product photos into viral..."
+                      className="w-full p-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 resize-none leading-relaxed"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-300">Button Redirect Link</label>
-                  <input
-                    type="text"
-                    name="buttonLink"
-                    value={formData.buttonLink}
-                    onChange={handleChange}
-                    placeholder="e.g. /portfolio or /book"
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
-                  />
+                  {/* Primary & Secondary Buttons */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-brand-400">Primary Button Text</label>
+                      <input
+                        type="text"
+                        name="heroCtaText"
+                        value={formData.heroCtaText}
+                        onChange={handleChange}
+                        placeholder="Book Your AI Reel Now"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-semibold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-brand-400">Primary Button Link</label>
+                      <input
+                        type="text"
+                        name="heroCtaLink"
+                        value={formData.heroCtaLink}
+                        onChange={handleChange}
+                        placeholder="/book"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Secondary Button Text</label>
+                      <input
+                        type="text"
+                        name="heroSecondaryText"
+                        value={formData.heroSecondaryText}
+                        onChange={handleChange}
+                        placeholder="Watch Portfolio"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-semibold focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-300">Secondary Button Link</label>
+                      <input
+                        type="text"
+                        name="heroSecondaryLink"
+                        value={formData.heroSecondaryLink}
+                        onChange={handleChange}
+                        placeholder="/portfolio"
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* 2. Video Media Source Card */}
-            <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
-              <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
-                <Play className="w-4 h-4 text-accent-cyan" />
-                Video Media Source
-              </h3>
+            {/* TAB 4: KEY STATS COUNTERS & RATING */}
+            {activeTab === 'stats' && (
+              <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
+                <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+                  Key Highlights, Stat Cards & Trust Rating
+                </h3>
 
-              {/* Toggle Video Input Mode */}
-              <div className="grid grid-cols-2 p-1 bg-surface-100 rounded-2xl border border-surface-200/80 max-w-xs">
-                <button
-                  type="button"
-                  onClick={() => setVideoMode('url')}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                    videoMode === 'url'
-                      ? 'bg-brand-600 text-white shadow-md'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <Link2 className="w-3.5 h-3.5" />
-                  Video URL
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoMode('upload')}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                    videoMode === 'upload'
-                      ? 'bg-brand-600 text-white shadow-md'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Upload Video File
-                </button>
-              </div>
+                <div className="space-y-4">
+                  {/* 3 Stat Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Stat 1 */}
+                    <div className="space-y-2 p-3.5 rounded-2xl bg-surface-100 border border-surface-200">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Stat Card 1</span>
+                      <input
+                        type="text"
+                        name="stat1Value"
+                        value={formData.stat1Value}
+                        onChange={handleChange}
+                        placeholder="2 Days"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-white text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        name="stat1Label"
+                        value={formData.stat1Label}
+                        onChange={handleChange}
+                        placeholder="Guaranteed Delivery"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-gray-300 text-[11px]"
+                      />
+                    </div>
 
-              {videoMode === 'url' ? (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-300">Direct Video URL (MP4 / WebM / Cloudinary / CDN) *</label>
-                  <input
-                    type="url"
-                    name="videoUrl"
-                    required
-                    value={formData.videoUrl}
-                    onChange={handleChange}
-                    placeholder="https://assets.mixkit.co/.../video.mp4"
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-mono focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    ref={videoInputRef}
-                    accept="video/*"
-                    onChange={handleVideoUpload}
-                    className="hidden"
-                  />
-                  <div
-                    onClick={() => !uploadingVideo && videoInputRef.current?.click()}
-                    className="border-2 border-dashed border-surface-200/80 hover:border-brand-500/80 rounded-2xl p-6 text-center cursor-pointer bg-surface-100/40 hover:bg-surface-100/70 transition-all space-y-2"
-                  >
-                    {uploadingVideo ? (
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
-                        <p className="text-xs font-bold text-white">
-                          {uploadStatus || `Uploading video to Cloud Storage... (${uploadProgress}%)`}
-                        </p>
-                        {uploadProgress > 0 && (
-                          <div className="w-56 bg-surface-200 h-2 rounded-full overflow-hidden mx-auto mt-2">
-                            <div
-                              className="bg-brand-500 h-full rounded-full transition-all duration-300 shadow-sm shadow-brand-400"
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-brand-400 mx-auto" />
-                        <p className="text-xs font-bold text-white">Click to Select & Upload Video File (Up to 500MB)</p>
-                        <p className="text-[11px] text-gray-400">Direct Cloud Upload: MP4, MOV, WEBM (Vertical 9:16 HD)</p>
-                      </>
-                    )}
+                    {/* Stat 2 */}
+                    <div className="space-y-2 p-3.5 rounded-2xl bg-surface-100 border border-surface-200">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Stat Card 2</span>
+                      <input
+                        type="text"
+                        name="stat2Value"
+                        value={formData.stat2Value}
+                        onChange={handleChange}
+                        placeholder="₹600"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-brand-400 text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        name="stat2Label"
+                        value={formData.stat2Label}
+                        onChange={handleChange}
+                        placeholder="Starter Packages"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-gray-300 text-[11px]"
+                      />
+                    </div>
+
+                    {/* Stat 3 */}
+                    <div className="space-y-2 p-3.5 rounded-2xl bg-surface-100 border border-surface-200">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Stat Card 3</span>
+                      <input
+                        type="text"
+                        name="stat3Value"
+                        value={formData.stat3Value}
+                        onChange={handleChange}
+                        placeholder="10x CTR"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-emerald-400 text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        name="stat3Label"
+                        value={formData.stat3Label}
+                        onChange={handleChange}
+                        placeholder="Instagram Boost"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#080B11] border border-surface-200 text-gray-300 text-[11px]"
+                      />
+                    </div>
                   </div>
 
-
-                  {formData.videoUrl && (
-                    <p className="text-[11px] text-emerald-400 font-mono truncate">
-                      ✓ Active Video: {formData.videoUrl}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 3. Floating Badges Configuration */}
-            <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
-              <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                Floating Trust Badges
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Floating Badge 1 */}
-                <div className="space-y-3 p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                    <ShieldCheck className="w-4 h-4" />
-                    Floating Badge 1 (Top-Left)
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Title</label>
+                  {/* Trust Rating Text */}
+                  <div className="space-y-1.5 pt-2">
+                    <label className="text-xs font-bold text-gray-300">Trust Badge Subtitle Text</label>
                     <input
                       type="text"
-                      name="floatingBadge1Title"
-                      value={formData.floatingBadge1Title}
+                      name="trustText"
+                      value={formData.trustText}
                       onChange={handleChange}
-                      placeholder="Commercial Rights"
-                      className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Subtitle</label>
-                    <input
-                      type="text"
-                      name="floatingBadge1Sub"
-                      value={formData.floatingBadge1Sub}
-                      onChange={handleChange}
-                      placeholder="100% Monetization"
-                      className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Floating Badge 2 */}
-                <div className="space-y-3 p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60">
-                  <div className="flex items-center gap-2 text-xs font-bold text-brand-400">
-                    <Zap className="w-4 h-4" />
-                    Floating Badge 2 (Bottom-Right)
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Title</label>
-                    <input
-                      type="text"
-                      name="floatingBadge2Title"
-                      value={formData.floatingBadge2Title}
-                      onChange={handleChange}
-                      placeholder="AI Voiceover"
-                      className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Subtitle</label>
-                    <input
-                      type="text"
-                      name="floatingBadge2Sub"
-                      value={formData.floatingBadge2Sub}
-                      onChange={handleChange}
-                      placeholder="Hindi & English"
-                      className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs"
+                      placeholder="4.9/5 by 150+ Brands"
+                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs font-semibold focus:outline-none focus:border-brand-500"
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Submit Action Button */}
             <button
@@ -496,7 +918,7 @@ export default function AdminHeroPage() {
               ) : (
                 <>
                   <Save className="w-5 h-5" />
-                  <span>Save & Publish to Live Homepage</span>
+                  <span>Save & Publish All Hero Changes to Homepage</span>
                 </>
               )}
             </button>
@@ -510,7 +932,7 @@ export default function AdminHeroPage() {
                 Live 9:16 Phone Mockup Preview
               </span>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                Real-time Preview
+                Real-time WYSIWYG
               </span>
             </div>
 
@@ -573,8 +995,8 @@ export default function AdminHeroPage() {
 
               {/* Floating Badge 1 (Top-Left) */}
               <div className="absolute -top-3 -left-3 glass-panel p-2.5 rounded-xl border-brand-400/40 flex items-center gap-2 shadow-xl animate-float">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  ✓
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(formData.floatingBadge1Color)}`}>
+                  {renderBadgeIcon(formData.floatingBadge1Icon)}
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-white leading-tight">
@@ -588,8 +1010,8 @@ export default function AdminHeroPage() {
 
               {/* Floating Badge 2 (Bottom-Right) */}
               <div className="absolute -bottom-3 -right-3 glass-panel p-2.5 rounded-xl border-brand-400/40 flex items-center gap-2 shadow-xl animate-float" style={{ animationDelay: '2s' }}>
-                <div className="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5" />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(formData.floatingBadge2Color)}`}>
+                  {renderBadgeIcon(formData.floatingBadge2Icon || 'zap')}
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-white leading-tight">
@@ -601,6 +1023,25 @@ export default function AdminHeroPage() {
                 </div>
               </div>
 
+            </div>
+
+            {/* Left Hero Headlines preview snippet */}
+            <div className="glass-panel p-4 rounded-2xl border border-surface-200/60 space-y-2 text-xs">
+              <span className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Live Left Copy Preview</span>
+              <div className="text-white font-bold text-sm">
+                {formData.heroHeadlineMain} <span className="text-gradient-blue">{formData.heroHeadlineGradient}</span>
+              </div>
+              <p className="text-gray-400 text-[11px] line-clamp-2">
+                {formData.heroSubheadline}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <span className="px-2 py-1 rounded bg-brand-600 text-white font-bold text-[10px]">
+                  {formData.heroCtaText}
+                </span>
+                <span className="px-2 py-1 rounded bg-surface-100 text-gray-300 font-medium text-[10px]">
+                  {formData.heroSecondaryText}
+                </span>
+              </div>
             </div>
 
           </div>

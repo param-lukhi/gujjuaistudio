@@ -304,6 +304,27 @@ model Review {
 
 model HeroShowcase {
   id                  String   @id @default("hero-main")
+  
+  // Left Hero Copy
+  heroTopPill         String   @default("Next-Gen AI Product Video Ads • Fast 2-Day Delivery")
+  heroHeadlineMain    String   @default("AI Product Ads That")
+  heroHeadlineGradient String  @default("Stop the Scroll.")
+  heroSubheadline     String   @default("Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.")
+  heroCtaText         String   @default("Book Your AI Reel Now")
+  heroCtaLink         String   @default("/book")
+  heroSecondaryText   String   @default("Watch Portfolio")
+  heroSecondaryLink   String   @default("/portfolio")
+  
+  // Key Stats Counters
+  stat1Value          String   @default("2 Days")
+  stat1Label          String   @default("Guaranteed Delivery")
+  stat2Value          String   @default("₹600")
+  stat2Label          String   @default("Starter Packages")
+  stat3Value          String   @default("10x CTR")
+  stat3Label          String   @default("Instagram Boost")
+  trustText           String   @default("4.9/5 by 150+ Brands")
+
+  // 9:16 Video Reel Card
   badgeText           String   @default("AI Reel Demo")
   durationText        String   @default("00:30")
   category            String   @default("Fashion & Luxury")
@@ -313,10 +334,19 @@ model HeroShowcase {
   thumbnailUrl        String?
   buttonText          String   @default("View All 7 Categories")
   buttonLink          String   @default("/portfolio")
+
+  // Floating Badge 1 (Top-Left)
   floatingBadge1Title String   @default("Commercial Rights")
   floatingBadge1Sub   String   @default("100% Monetization")
+  floatingBadge1Icon  String   @default("check")
+  floatingBadge1Color String   @default("emerald")
+
+  // Floating Badge 2 (Bottom-Right)
   floatingBadge2Title String   @default("AI Voiceover")
   floatingBadge2Sub   String   @default("Hindi & English")
+  floatingBadge2Icon  String   @default("zap")
+  floatingBadge2Color String   @default("brand")
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now()) @updatedAt
 }
