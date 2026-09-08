@@ -12,13 +12,31 @@ export default async function PricingPage() {
   let dbPackages: any[] = [];
   try {
     const pkgs = await prisma.package.findMany({
+      where: {
+        slug: { not: 'custom-package-pricing-config' },
+      },
       orderBy: { price: 'asc' },
     });
     if (pkgs.length > 0) {
-      dbPackages = pkgs.map(p => ({
-        ...p,
-        features: JSON.parse(p.features || '[]'),
-      }));
+      dbPackages = pkgs.map(p => {
+        let parsedFeatures: string[] = [];
+        try {
+          if (Array.isArray(p.features)) {
+            parsedFeatures = p.features;
+          } else if (typeof p.features === 'string' && p.features.trim().startsWith('[')) {
+            parsedFeatures = JSON.parse(p.features);
+          } else if (typeof p.features === 'string' && p.features.trim()) {
+            parsedFeatures = p.features.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        } catch {
+          parsedFeatures = [];
+        }
+
+        return {
+          ...p,
+          features: Array.isArray(parsedFeatures) ? parsedFeatures : [],
+        };
+      });
     }
   } catch (e) {
     console.error('Db fetch fallback for pricing:', e);

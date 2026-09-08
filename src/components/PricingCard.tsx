@@ -267,6 +267,22 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {packages.map((pkg) => {
             const isPopular = pkg.popular;
+            const featuresList: string[] = Array.isArray(pkg.features)
+              ? pkg.features
+              : typeof pkg.features === 'string'
+              ? (() => {
+                  try {
+                    const parsed = JSON.parse(pkg.features);
+                    return Array.isArray(parsed) ? parsed : [pkg.features];
+                  } catch {
+                    return [pkg.features];
+                  }
+                })()
+              : [];
+
+            const displayName = pkg.name || 'AI Reel Package';
+            const buttonName = displayName.includes(' ') ? displayName.split(' ').slice(1).join(' ') : displayName;
+
             return (
               <div
                 key={pkg.id}
@@ -285,7 +301,7 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
                 <div>
                   {/* Package Title */}
                   <h3 className="text-xl font-extrabold text-white mb-2">
-                    {pkg.name}
+                    {displayName}
                   </h3>
 
                   {/* Price */}
@@ -297,12 +313,12 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
                   </div>
 
                   <p className="text-xs text-gray-400 border-b border-surface-200/50 pb-5 mb-6">
-                    {pkg.deliveryDays} • {pkg.revisions}
+                    {pkg.deliveryDays || 'Delivery in 2 Days'} • {pkg.revisions || '1 Revision'}
                   </p>
 
                   {/* Features List */}
                   <ul className="space-y-3.5 text-sm mb-8">
-                    {pkg.features.map((feature, idx) => (
+                    {featuresList.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3 text-gray-300">
                         <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isPopular ? 'bg-brand-500/20 text-brand-400' : 'bg-surface-200 text-brand-400'
                           }`}>
@@ -323,7 +339,7 @@ export default function PricingCard({ packages = DEFAULT_PACKAGES }: PricingProp
                       : 'bg-surface-100 hover:bg-surface-200 text-white border border-surface-200 hover:border-brand-500/50'
                     }`}
                 >
-                  Select {pkg.name.split(' ')[1] || 'Package'}
+                  Select {buttonName || 'Package'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
