@@ -1,8 +1,3 @@
-import { getFirebaseApp, getFirebaseAuth } from '@/lib/firebase';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { signInAnonymously } from 'firebase/auth';
-import { uploadToSupabaseStorage } from '@/lib/supabaseStorage';
-
 export interface UploadOptions {
   folder?: string;
   onProgress?: (percent: number, statusText?: string) => void;
@@ -83,176 +78,123 @@ async function convertFileToDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Uploads a video to high-speed Catbox CDN (Direct playable MP4 with HTTP Byte-Range support)
+ * Uploads large video/audio/image files in 2MB chunks.
+ * This completely bypasses Vercel's 4.5MB Serverless Function payload limit,
+ * allowing 10MB, 50MB, 100MB+ videos with 100% reliable real-time progress.
  */
-async function uploadVideoToPlayableCDN(
+async function uploadMediaInChunks(
   file: File,
-  onProgress?: (percent: number, statusText?: string) => void
+  options: UploadOptions = {}
 ): Promise<string> {
-  onProgress?.(35, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB to High-Speed Video Stream...`);
+  const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB per chunk (Vercel limit is 4.5MB)
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadId = `upl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const totalMb = (file.size / (1024 * 1024)).toFixed(1);
 
-  // 1. Try Catbox.moe (Direct static MP4, full CORS, Byte-Ranges)
-  try {
+  options.onProgress?.(5, `Preparing ${totalMb}MB video upload (${totalChunks} chunks)...`);
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    const start = chunkIndex * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunkBlob = file.slice(start, end);
+
     const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', file);
+    formData.append('uploadId', uploadId);
+    formData.append('chunkIndex', chunkIndex.toString());
+    formData.append('totalChunks', totalChunks.toString());
+    formData.append('fileName', file.name);
+    formData.append('mimeType', file.type || 'video/mp4');
+    formData.append('chunk', chunkBlob);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let attempts = 0;
+    let success = false;
+    let lastError: any = null;
 
-    const res = await fetch('https://catbox.moe/user/api.php', {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+    while (attempts < 3 && !success) {
+      try {
+        attempts++;
+        const percent = Math.round(((chunkIndex + 1) / totalChunks) * 95);
+        options.onProgress?.(
+          percent,
+          `Uploading chunk ${chunkIndex + 1}/${totalChunks} (${(end / (1024 * 1024)).toFixed(1)}MB / ${totalMb}MB - ${percent}%)`
+        );
 
-    if (res.ok) {
-      const url = (await res.text()).trim();
-      if (url.startsWith('http')) {
-        onProgress?.(100, 'Direct MP4 Stream Ready');
-        return url;
-      }
-    }
-  } catch (err) {
-    console.warn('Catbox API attempt:', err);
-  }
+        const res = await fetch('/api/upload/chunk', {
+          method: 'POST',
+          body: formData,
+        });
 
-  // 2. Try Litterbox
-  try {
-    const litterData = new FormData();
-    litterData.append('reqtype', 'fileupload');
-    litterData.append('time', '72h');
-    litterData.append('fileToUpload', file);
-
-    const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-      method: 'POST',
-      body: litterData,
-    });
-
-    if (res.ok) {
-      const url = (await res.text()).trim();
-      if (url.startsWith('http')) {
-        onProgress?.(100, 'Direct MP4 Stream Ready');
-        return url;
-      }
-    }
-  } catch (err) {
-    console.warn('Litterbox attempt:', err);
-  }
-
-  throw new Error('Playable CDN unavailable');
-}
-
-/**
- * Uploads media file to Firebase Storage with anonymous auth and progress tracking
- */
-async function uploadToFirebase(
-  file: File,
-  folder: string,
-  onProgress?: (percent: number, statusText?: string) => void
-): Promise<string> {
-  const authObj = getFirebaseAuth();
-  if (authObj?.auth && !authObj.auth.currentUser) {
-    try {
-      await signInAnonymously(authObj.auth);
-    } catch (authErr) {
-      console.warn('Firebase anonymous auth attempt:', authErr);
-    }
-  }
-
-  const app = getFirebaseApp();
-  if (!app) throw new Error('Firebase app not ready');
-
-  // Support both custom and default appspot bucket
-  let storage;
-  try {
-    storage = getStorage(app, 'gs://gujjuaistudio-d3377.appspot.com');
-  } catch {
-    storage = getStorage(app);
-  }
-
-  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const storageRef = ref(storage, `${folder}/${Date.now()}_${cleanName}`);
-
-  const uploadTask = uploadBytesResumable(storageRef, file, {
-    contentType: file.type || 'video/mp4',
-  });
-
-  return new Promise<string>((resolve, reject) => {
-    let hasProgress = false;
-    const watchdog = setTimeout(() => {
-      if (!hasProgress) {
-        try { uploadTask.cancel(); } catch {}
-        reject(new Error('FIREBASE_TIMEOUT'));
-      }
-    }, 8000);
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        if (snapshot.bytesTransferred > 0) {
-          hasProgress = true;
-          clearTimeout(watchdog);
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
-          const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
-          onProgress?.(progress, `${transferredMb}MB / ${totalMb}MB (${progress}%)`);
+        if (!res.ok) {
+          throw new Error(`Server returned HTTP ${res.status}`);
         }
-      },
-      (err) => {
-        clearTimeout(watchdog);
-        reject(err);
-      },
-      async () => {
-        clearTimeout(watchdog);
-        try {
-          onProgress?.(100, 'Finalizing download URL...');
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(url);
-        } catch (urlErr) {
-          reject(urlErr);
+
+        const data = await res.json();
+        if (data.complete && data.url) {
+          options.onProgress?.(100, 'Video processed & ready!');
+          return data.url;
         }
+
+        success = true;
+      } catch (err) {
+        lastError = err;
+        // Wait 500ms before retry
+        await new Promise((r) => setTimeout(r, 500 * attempts));
       }
-    );
-  });
+    }
+
+    if (!success) {
+      throw new Error(
+        `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}: ${lastError?.message || 'Network error'}`
+      );
+    }
+  }
+
+  throw new Error('Upload completed all chunks but did not receive final asset URL.');
 }
 
 /**
  * Universal media uploader:
- * 1. For images: High-speed server upload with compressed canvas fallback (<50KB)
- * 2. For videos: Multi-cloud video storage (Playable CDN -> Firebase -> Supabase -> Local Upload)
+ * 1. For images: High-speed server upload or compressed canvas (<50KB)
+ * 2. For videos/files:
+ *    - If <= 3MB: Fast single POST to /api/upload
+ *    - If > 3MB: Resilient Chunked Uploading to /api/upload/chunk (No 4.5MB limit!)
  */
 export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
   if (!file) throw new Error('No file selected.');
 
   const isImage = file.type.startsWith('image/');
-  const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
-  const folder = options.folder || (isVideo ? 'portfolio_videos' : 'thumbnails');
+  const isVideo =
+    file.type.startsWith('video/') ||
+    /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
 
-  options.onProgress?.(25, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
+  // If file is larger than 3MB, always use resilient Chunked Uploading
+  if (file.size > 3 * 1024 * 1024) {
+    return await uploadMediaInChunks(file, options);
+  }
 
-  // ==========================================
-  // 1. PRIMARY: Direct /api/upload (Saves to PostgreSQL MediaAsset / Local / Cloudinary)
-  // ==========================================
+  // For small files (<= 3MB), attempt standard /api/upload first
   try {
+    options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
     const formData = new FormData();
     formData.append('file', file);
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
     if (res.ok) {
       const json = await res.json();
       if (json.url) {
-        options.onProgress?.(100, isVideo ? 'Video ready & playable' : 'Image uploaded');
+        options.onProgress?.(100, isVideo ? 'Video ready' : 'Image uploaded');
         return json.url;
       }
     }
   } catch (apiErr) {
-    console.warn('/api/upload server attempt failed, trying fallback:', apiErr);
+    console.warn('Standard /api/upload attempt failed, falling back:', apiErr);
   }
 
-  // ==========================================
-  // 2. FALLBACK FOR IMAGES: Instant Canvas Compression (<50KB)
-  // ==========================================
+  // If standard upload failed on a small video/media, try chunked upload
+  if (isVideo || file.size > 1024 * 1024) {
+    return await uploadMediaInChunks(file, options);
+  }
+
+  // Fallback for images: Instant Canvas Compression (<50KB)
   if (isImage) {
     try {
       options.onProgress?.(80, 'Optimizing image...');
@@ -264,27 +206,5 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     }
   }
 
-  // ==========================================
-  // 3. FALLBACK FOR VIDEOS: Multi-cloud (Firebase / Playable CDN / Supabase)
-  // ==========================================
-  try {
-    const firebaseUrl = await uploadToFirebase(file, folder, options.onProgress);
-    if (firebaseUrl) return firebaseUrl;
-  } catch {}
-
-  try {
-    const cdnUrl = await uploadVideoToPlayableCDN(file, options.onProgress);
-    if (cdnUrl) return cdnUrl;
-  } catch {}
-
-  try {
-    const supabaseUrl = await uploadToSupabaseStorage(file, folder, options.onProgress);
-    if (supabaseUrl) return supabaseUrl;
-  } catch {}
-
-  throw new Error('Video upload failed. Please try again or paste a direct video link in the Video Link tab.');
+  throw new Error('Upload failed. Please try again.');
 }
-
-
-
-

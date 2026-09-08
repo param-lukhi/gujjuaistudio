@@ -330,3 +330,15 @@ model MediaAsset {
   createdAt DateTime @default(now())
 }
 
+model MediaChunk {
+  id          String   @id @default(cuid())
+  uploadId    String
+  chunkIndex  Int
+  totalChunks Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@index([uploadId])
+}
+
+
