@@ -264,8 +264,25 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   // 2. VIDEO / REEL UPLOAD FLOW (Direct Playable Stream)
   // ==========================================
   const folder = options.folder || 'portfolio_videos';
+  options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB video...`);
 
-  // 2A. Try Direct Playable CDN (Catbox / MP4 static stream with Byte-Range support)
+  // 2A. Primary: Try Server Upload Endpoint (/api/upload -> Direct High-Speed MP4 CDN)
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.url && !json.url.startsWith('data:')) {
+        options.onProgress?.(100, 'Video Ready & Playable');
+        return json.url;
+      }
+    }
+  } catch (apiErr) {
+    console.warn('/api/upload server attempt:', apiErr);
+  }
+
+  // 2B. Secondary: Try Direct Playable CDN (Catbox / MP4 static stream with Byte-Range support)
   try {
     const cdnUrl = await uploadVideoToPlayableCDN(file, options.onProgress);
     if (cdnUrl) return cdnUrl;
@@ -273,7 +290,7 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     console.warn('Playable CDN fallback:', cdnErr);
   }
 
-  // 2B. Try Firebase Cloud Storage
+  // 2C. Tertiary: Try Firebase Cloud Storage
   try {
     const firebaseUrl = await uploadToFirebase(file, folder, options.onProgress);
     if (firebaseUrl) return firebaseUrl;
@@ -281,7 +298,7 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     console.warn('Firebase upload fallback:', fbErr);
   }
 
-  // 2C. Try Supabase Storage
+  // 2D. Quaternary: Try Supabase Storage
   try {
     const supabaseUrl = await uploadToSupabaseStorage(file, folder, options.onProgress);
     if (supabaseUrl) return supabaseUrl;
@@ -289,18 +306,7 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     console.warn('Supabase storage fallback:', sbErr);
   }
 
-  // 2D. Try Server Upload Endpoint (/api/upload)
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.url) return json.url;
-    }
-  } catch {}
-
-  throw new Error('Video upload failed across all cloud providers. Please paste a direct video link in the Video Link tab.');
+  throw new Error('Video upload failed across all providers. Please paste a direct video link in the Video Link tab.');
 }
 
 

@@ -49,25 +49,42 @@ export async function POST(request: Request) {
         const localUrl = `/uploads/${uniqueFileName}`;
         return NextResponse.json({ success: true, url: localUrl });
       } catch (localErr) {
-        console.warn('Local storage write failed, falling back to base64 data URI:', localErr);
+        console.warn('Local storage write failed, falling back to server CDN:', localErr);
       }
     }
 
-    // 3. For any media file under 4.5MB (Images, Audio, Reels/Videos), return high-speed Base64 data URI
-    if (buffer.length <= 4.5 * 1024 * 1024) {
-      const mimeType = file.type || (file.name.toLowerCase().endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
+    // 3. For videos or media on Vercel / serverless: Upload to high-speed static CDN (Direct MP4 Stream)
+    try {
+      const serverFormData = new FormData();
+      const fileBlob = new Blob([buffer], { type: file.type || 'video/mp4' });
+      serverFormData.append('files[]', fileBlob, file.name || 'video.mp4');
+
+      const cdnRes = await fetch('https://uguu.se/upload.php', {
+        method: 'POST',
+        body: serverFormData,
+      });
+
+      if (cdnRes.ok) {
+        const cdnJson = await cdnRes.json();
+        if (cdnJson?.files?.[0]?.url) {
+          return NextResponse.json({ success: true, url: cdnJson.files[0].url });
+        }
+      }
+    } catch (cdnErr) {
+      console.warn('Server CDN forwarding failed:', cdnErr);
+    }
+
+    // 4. For images only (under 1MB), return optimized Base64 data URI
+    if (file.type.startsWith('image/') && buffer.length <= 1 * 1024 * 1024) {
+      const mimeType = file.type || 'image/jpeg';
       const base64 = buffer.toString('base64');
       const dataUri = `data:${mimeType};base64,${base64}`;
       return NextResponse.json({ success: true, url: dataUri });
     }
 
-    // 4. If large video on serverless without cloud storage
     return NextResponse.json(
-      {
-        error:
-          'Video file exceeds serverless direct upload limit (4.5MB). Please use Video Link or configure Cloud storage.',
-      },
-      { status: 400 }
+      { error: 'Media upload failed. Please try again or paste a video link.' },
+      { status: 500 }
     );
   } catch (error: any) {
     console.error('Upload endpoint error:', error);
