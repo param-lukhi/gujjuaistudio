@@ -32,6 +32,8 @@ import {
   AtSign,
   Briefcase
 } from 'lucide-react';
+import { uploadMediaFile } from '@/lib/uploadClient';
+
 
 const AI_PRESET_AVATARS = [
   {
@@ -122,34 +124,19 @@ export default function ProfilePage() {
 
   const handleImageFileUpload = async (file: File) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image file size must be less than 5MB', 'error');
-      return;
-    }
 
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setProfile((prev: any) => ({ ...prev, image: data.url }));
-        showToast('Profile photo uploaded! Click "Save Changes" to apply.', 'success');
-      } else {
-        showToast(data.error || 'Failed to upload photo', 'error');
-      }
+      const url = await uploadMediaFile(file, { folder: 'avatars' });
+      setProfile((prev: any) => ({ ...prev, image: url }));
+      showToast('Profile photo uploaded! Click "Save Changes" to apply.', 'success');
     } catch (err: any) {
       showToast(err.message || 'Error uploading image', 'error');
     } finally {
       setUploadingImage(false);
     }
   };
+
 
   const handleRemovePhoto = () => {
     setProfile((prev: any) => ({ ...prev, image: '' }));

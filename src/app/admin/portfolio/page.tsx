@@ -8,6 +8,8 @@ import {
   CheckCircle2, AlertCircle, RefreshCw, Monitor, Smartphone, 
   Square, Video, Layers, Sliders
 } from 'lucide-react';
+import { uploadMediaFile } from '@/lib/uploadClient';
+
 
 const VIDEO_FORMATS_LIST = [
   'MP4', 'MOV', 'MKV', 'WEBM', 'AVI', 'M4V', '3GP', 'WMV', 'FLV', 'TS', 'MPEG', 'ALL'
@@ -133,23 +135,14 @@ export default function ManagePortfolioPage() {
     setUploadError(null);
 
     try {
-      const data = new FormData();
-      data.append('file', file);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: data,
+      const url = await uploadMediaFile(file, {
+        folder: type === 'video' ? 'portfolio_videos' : 'portfolio_thumbnails',
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.url) {
-        throw new Error(json.error || 'Upload failed');
-      }
-
       if (type === 'video') {
-        setFormData((prev) => ({ ...prev, videoUrl: json.url }));
+        setFormData((prev) => ({ ...prev, videoUrl: url }));
       } else {
-        setFormData((prev) => ({ ...prev, thumbnailUrl: json.url }));
+        setFormData((prev) => ({ ...prev, thumbnailUrl: url }));
       }
     } catch (err: any) {
       console.error('File upload error:', err);
@@ -159,6 +152,7 @@ export default function ManagePortfolioPage() {
       if (type === 'thumbnail') setUploadingThumb(false);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

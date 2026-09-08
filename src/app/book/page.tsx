@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { uploadMediaFile } from '@/lib/uploadClient';
+
 import {
   Sparkles,
   Upload,
@@ -325,17 +327,10 @@ function BookingWizard() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const data = new FormData();
-      data.append('file', file);
-
       try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: data,
-        });
-        const result = await res.json();
-        if (result.url) {
-          newUrls.push(result.url);
+        const url = await uploadMediaFile(file, { folder: 'booking_assets' });
+        if (url) {
+          newUrls.push(url);
         }
       } catch (err) {
         console.error('Error uploading file:', err);
@@ -356,17 +351,10 @@ function BookingWizard() {
     if (!file) return;
 
     setUploadingProof(true);
-    const data = new FormData();
-    data.append('file', file);
-
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: data,
-      });
-      const result = await res.json();
-      if (result.url) {
-        setPaymentProofUrl(result.url);
+      const url = await uploadMediaFile(file, { folder: 'payment_proofs' });
+      if (url) {
+        setPaymentProofUrl(url);
       }
     } catch (err) {
       console.error('Error uploading payment receipt:', err);
@@ -374,6 +362,7 @@ function BookingWizard() {
       setUploadingProof(false);
     }
   };
+
 
   // Final Submission to API
   const handleFinalSubmitWithPayment = async (isPaidViaUpi: boolean = true) => {

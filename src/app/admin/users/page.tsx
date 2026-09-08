@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminSidebar from '@/components/AdminSidebar';
 import { useToast } from '@/components/providers/ToastProvider';
+import { uploadMediaFile } from '@/lib/uploadClient';
 import {
   Users,
   Search,
@@ -64,22 +65,16 @@ export default function AdminUsersPage() {
     if (!file) return;
     setUploadingUserImage(true);
     try {
-      const data = new FormData();
-      data.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: data });
-      const json = await res.json();
-      if (res.ok && json.url) {
-        setFormData((prev) => ({ ...prev, image: json.url }));
-        showToast('Photo uploaded successfully!', 'success');
-      } else {
-        showToast(json.error || 'Failed to upload photo', 'error');
-      }
+      const url = await uploadMediaFile(file, { folder: 'avatars' });
+      setFormData((prev) => ({ ...prev, image: url }));
+      showToast('Photo uploaded successfully!', 'success');
     } catch (e: any) {
-      showToast(e.message || 'Network error', 'error');
+      showToast(e.message || 'Upload error', 'error');
     } finally {
       setUploadingUserImage(false);
     }
   };
+
 
   useEffect(() => {
     fetchUsers();

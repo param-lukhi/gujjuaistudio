@@ -42,19 +42,32 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
-export function getFirebaseAuth(): { app: FirebaseApp; auth: Auth } | null {
+export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined') return null;
-
   try {
     if (!app) {
       app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     }
-    if (!auth && app) {
-      auth = getAuth(app);
+    return app;
+  } catch (error) {
+    console.error('Firebase App initialization error:', error);
+    return null;
+  }
+}
+
+export function getFirebaseAuth(): { app: FirebaseApp; auth: Auth } | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const initializedApp = getFirebaseApp();
+    if (!initializedApp) return null;
+    if (!auth) {
+      auth = getAuth(initializedApp);
     }
-    return app && auth ? { app, auth } : null;
+    return { app: initializedApp, auth };
   } catch (error) {
     console.error('Firebase Auth initialization error:', error);
     return null;
   }
 }
+

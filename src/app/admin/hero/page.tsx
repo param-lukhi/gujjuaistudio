@@ -8,6 +8,8 @@ import {
   Layers, ExternalLink, Zap, ShieldCheck, Film, Image as ImageIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { uploadMediaFile } from '@/lib/uploadClient';
+
 
 export default function AdminHeroPage() {
   const [loading, setLoading] = useState(true);
@@ -18,6 +20,7 @@ export default function AdminHeroPage() {
   // Video input mode: 'upload' | 'url'
   const [videoMode, setVideoMode] = useState<'upload' | 'url'>('url');
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -90,27 +93,24 @@ export default function AdminHeroPage() {
     if (!file) return;
 
     setUploadingVideo(true);
+    setUploadProgress(0);
     setErrorMsg(null);
 
     try {
-      const body = new FormData();
-      body.append('file', file);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body,
+      const url = await uploadMediaFile(file, {
+        folder: 'hero_reels',
+        onProgress: (p) => setUploadProgress(p),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to upload video');
-
-      setFormData((prev) => ({ ...prev, videoUrl: data.url }));
-      setSuccessMsg('Video file uploaded successfully!');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setFormData((prev) => ({ ...prev, videoUrl: url }));
+      setSuccessMsg('Reel video uploaded & attached successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error uploading video');
     } finally {
       setUploadingVideo(false);
+      setUploadProgress(0);
+      if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
 
@@ -368,13 +368,23 @@ export default function AdminHeroPage() {
                     className="hidden"
                   />
                   <div
-                    onClick={() => videoInputRef.current?.click()}
+                    onClick={() => !uploadingVideo && videoInputRef.current?.click()}
                     className="border-2 border-dashed border-surface-200/80 hover:border-brand-500/80 rounded-2xl p-6 text-center cursor-pointer bg-surface-100/40 hover:bg-surface-100/70 transition-all space-y-2"
                   >
                     {uploadingVideo ? (
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
-                        <p className="text-xs font-bold text-white">Uploading video to Cloud Storage...</p>
+                        <p className="text-xs font-bold text-white">
+                          Uploading video to Cloud Storage... {uploadProgress > 0 ? `(${uploadProgress}%)` : ''}
+                        </p>
+                        {uploadProgress > 0 && (
+                          <div className="w-48 bg-surface-200 h-1.5 rounded-full overflow-hidden mx-auto mt-2">
+                            <div
+                              className="bg-brand-500 h-full rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <>
