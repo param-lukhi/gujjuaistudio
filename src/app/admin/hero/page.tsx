@@ -1390,6 +1390,7 @@ export default function AdminHeroPage() {
                     src={formData.videoUrl}
                     autoPlay
                     loop
+                    preload="auto"
                     muted={isPreviewMuted}
                     playsInline
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"

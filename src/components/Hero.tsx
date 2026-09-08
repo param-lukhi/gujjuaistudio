@@ -347,6 +347,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                     src={heroData.videoUrl}
                     autoPlay
                     loop
+                    preload="auto"
                     muted={isMuted}
                     playsInline
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"

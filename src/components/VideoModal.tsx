@@ -72,11 +72,12 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
                 ref={videoRef}
                 src={item.videoUrl}
                 autoPlay
+                preload="auto"
                 playsInline
                 loop
                 muted={isMuted}
                 poster={item.thumbnailUrl}
-                className="w-full h-full object-contain sm:object-cover bg-black"
+                className="w-full h-full object-contain sm:object-cover bg-black cursor-pointer"
                 onClick={togglePlay}
               />
 
