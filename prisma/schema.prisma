@@ -336,6 +336,9 @@ model HeroShowcase {
   buttonText          String   @default("View All 7 Categories")
   buttonLink          String   @default("/portfolio")
 
+  // Floating Badges JSON list (Full CRUD)
+  floatingBadges      String   @default("[]")
+
   // Floating Badge 1 (Top-Left)
   floatingBadge1Title String   @default("Commercial Rights")
   floatingBadge1Sub   String   @default("100% Monetization")

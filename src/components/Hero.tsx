@@ -9,6 +9,16 @@ import {
 } from 'lucide-react';
 import { useAuthModal } from './providers/AuthModalContext';
 
+export interface FloatingBadgeItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color: string;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  enabled?: boolean;
+}
+
 export interface HeroShowcaseData {
   // Left Hero Copy
   heroTopPill?: string;
@@ -40,13 +50,15 @@ export interface HeroShowcaseData {
   buttonText?: string;
   buttonLink?: string;
 
-  // Floating Badge 1 (Top-Left)
+  // Floating Badges JSON list
+  floatingBadges?: string;
+
+  // Fallback Badges
   floatingBadge1Title?: string;
   floatingBadge1Sub?: string;
   floatingBadge1Icon?: string;
   floatingBadge1Color?: string;
 
-  // Floating Badge 2 (Bottom-Right)
   floatingBadge2Title?: string;
   floatingBadge2Sub?: string;
   floatingBadge2Icon?: string;
@@ -80,6 +92,27 @@ const DEFAULT_HERO: HeroShowcaseData = {
   buttonText: 'View All 7 Categories',
   buttonLink: '/portfolio',
   
+  floatingBadges: JSON.stringify([
+    {
+      id: 'b-1',
+      title: 'Commercial Rights',
+      subtitle: '100% Monetization',
+      icon: 'check',
+      color: 'emerald',
+      position: 'top-left',
+      enabled: true,
+    },
+    {
+      id: 'b-2',
+      title: 'AI Voiceover',
+      subtitle: 'Hindi & English',
+      icon: 'zap',
+      color: 'brand',
+      position: 'bottom-right',
+      enabled: true,
+    },
+  ]),
+
   floatingBadge1Title: 'Commercial Rights',
   floatingBadge1Sub: '100% Monetization',
   floatingBadge1Icon: 'check',
@@ -134,6 +167,20 @@ function getBadgeColorStyles(colorKey?: string) {
   }
 }
 
+function getBadgePositionClasses(pos?: string) {
+  switch (pos) {
+    case 'top-right':
+      return 'absolute top-2 right-2 sm:-top-4 sm:-right-4';
+    case 'bottom-left':
+      return 'absolute bottom-2 left-2 sm:-bottom-4 sm:-left-4';
+    case 'bottom-right':
+      return 'absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4';
+    case 'top-left':
+    default:
+      return 'absolute top-2 left-2 sm:-top-4 sm:-left-4';
+  }
+}
+
 export default function Hero({ initialData }: { initialData?: HeroShowcaseData }) {
   const { data: session } = useSession();
   const { requireAuth } = useAuthModal();
@@ -159,6 +206,39 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
       }, heroData.heroCtaLink || '/book');
     }
   };
+
+  // Parse dynamic floating badges
+  let badgesList: FloatingBadgeItem[] = [];
+  try {
+    if (heroData.floatingBadges) {
+      badgesList = JSON.parse(heroData.floatingBadges);
+    }
+  } catch (e) {}
+
+  if (!badgesList || badgesList.length === 0) {
+    badgesList = [
+      {
+        id: 'b-1',
+        title: heroData.floatingBadge1Title || 'Commercial Rights',
+        subtitle: heroData.floatingBadge1Sub || '100% Monetization',
+        icon: heroData.floatingBadge1Icon || 'check',
+        color: heroData.floatingBadge1Color || 'emerald',
+        position: 'top-left',
+        enabled: true,
+      },
+      {
+        id: 'b-2',
+        title: heroData.floatingBadge2Title || 'AI Voiceover',
+        subtitle: heroData.floatingBadge2Sub || 'Hindi & English',
+        icon: heroData.floatingBadge2Icon || 'zap',
+        color: heroData.floatingBadge2Color || 'brand',
+        position: 'bottom-right',
+        enabled: true,
+      },
+    ];
+  }
+
+  const activeBadges = badgesList.filter((b) => b.enabled !== false);
 
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-hero-gradient">
@@ -301,35 +381,26 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                 </div>
               </div>
 
-              {/* Floating Badge 1 (Top-Left) */}
-              <div className="absolute top-2 left-2 sm:-top-4 sm:-left-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20">
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorStyles(heroData.floatingBadge1Color)}`}>
-                  {renderBadgeIcon(heroData.floatingBadge1Icon)}
-                </div>
-                <div>
-                  <div className="text-[11px] sm:text-xs font-bold text-white">
-                    {heroData.floatingBadge1Title || 'Commercial Rights'}
+              {/* Dynamic Floating Badges (CRUD Rendered) */}
+              {activeBadges.map((badge, idx) => (
+                <div
+                  key={badge.id || idx}
+                  className={`${getBadgePositionClasses(badge.position)} glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20`}
+                  style={{ animationDelay: `${idx * 1.5}s` }}
+                >
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorStyles(badge.color)}`}>
+                    {renderBadgeIcon(badge.icon)}
                   </div>
-                  <div className="text-[9px] sm:text-[10px] text-gray-400">
-                    {heroData.floatingBadge1Sub || '100% Monetization'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Badge 2 (Bottom-Right) */}
-              <div className="absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 glass-panel p-2 sm:p-3 rounded-xl border-brand-400/40 flex items-center gap-2 sm:gap-2.5 shadow-xl animate-float z-20" style={{ animationDelay: '2s' }}>
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorStyles(heroData.floatingBadge2Color)}`}>
-                  {renderBadgeIcon(heroData.floatingBadge2Icon || 'zap')}
-                </div>
-                <div>
-                  <div className="text-[11px] sm:text-xs font-bold text-white">
-                    {heroData.floatingBadge2Title || 'AI Voiceover'}
-                  </div>
-                  <div className="text-[9px] sm:text-[10px] text-gray-400">
-                    {heroData.floatingBadge2Sub || 'Hindi & English'}
+                  <div>
+                    <div className="text-[11px] sm:text-xs font-bold text-white leading-tight">
+                      {badge.title}
+                    </div>
+                    <div className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">
+                      {badge.subtitle}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
 
             </div>
 

@@ -7,10 +7,20 @@ import {
   Loader2, CheckCircle2, AlertCircle, RefreshCw, 
   Layers, ExternalLink, Zap, ShieldCheck, Film, 
   Star, Check, Headphones, Video, Flame, Layout, BarChart3,
-  Plus, Trash2, Copy, CheckCircle, Radio, ArrowRight
+  Plus, Trash2, Copy, CheckCircle, Radio, ArrowRight, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { uploadMediaFile } from '@/lib/uploadClient';
+
+export interface FloatingBadge {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color: string;
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  enabled: boolean;
+}
 
 interface HeroItem {
   id: string;
@@ -39,17 +49,37 @@ interface HeroItem {
   thumbnailUrl?: string;
   buttonText: string;
   buttonLink: string;
-  floatingBadge1Title: string;
-  floatingBadge1Sub: string;
-  floatingBadge1Icon: string;
-  floatingBadge1Color: string;
-  floatingBadge2Title: string;
-  floatingBadge2Sub: string;
-  floatingBadge2Icon: string;
-  floatingBadge2Color: string;
-  createdAt?: string;
-  updatedAt?: string;
+  floatingBadges?: string;
+  floatingBadge1Title?: string;
+  floatingBadge1Sub?: string;
+  floatingBadge1Icon?: string;
+  floatingBadge1Color?: string;
+  floatingBadge2Title?: string;
+  floatingBadge2Sub?: string;
+  floatingBadge2Icon?: string;
+  floatingBadge2Color?: string;
 }
+
+const DEFAULT_BADGES: FloatingBadge[] = [
+  {
+    id: 'badge-1',
+    title: 'Commercial Rights',
+    subtitle: '100% Monetization',
+    icon: 'check',
+    color: 'emerald',
+    position: 'top-left',
+    enabled: true,
+  },
+  {
+    id: 'badge-2',
+    title: 'AI Voiceover',
+    subtitle: 'Hindi & English',
+    icon: 'zap',
+    color: 'brand',
+    position: 'bottom-right',
+    enabled: true,
+  },
+];
 
 const BLANK_HERO: Omit<HeroItem, 'id' | 'isActive'> = {
   heroTopPill: 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery',
@@ -76,14 +106,7 @@ const BLANK_HERO: Omit<HeroItem, 'id' | 'isActive'> = {
   thumbnailUrl: '',
   buttonText: 'View All 7 Categories',
   buttonLink: '/portfolio',
-  floatingBadge1Title: 'Commercial Rights',
-  floatingBadge1Sub: '100% Monetization',
-  floatingBadge1Icon: 'check',
-  floatingBadge1Color: 'emerald',
-  floatingBadge2Title: 'AI Voiceover',
-  floatingBadge2Sub: 'Hindi & English',
-  floatingBadge2Icon: 'zap',
-  floatingBadge2Color: 'brand',
+  floatingBadges: JSON.stringify(DEFAULT_BADGES),
 };
 
 export default function AdminHeroPage() {
@@ -96,7 +119,7 @@ export default function AdminHeroPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Active Editor Tab
-  const [activeTab, setActiveTab] = useState<'reel' | 'badges' | 'copy' | 'stats'>('reel');
+  const [activeTab, setActiveTab] = useState<'reel' | 'badges' | 'copy' | 'stats'>('badges');
 
   // Video input mode: 'upload' | 'url'
   const [videoMode, setVideoMode] = useState<'upload' | 'url'>('url');
@@ -111,6 +134,9 @@ export default function AdminHeroPage() {
     isActive: true,
     ...BLANK_HERO,
   });
+
+  // Dynamic Floating Badges list state (CRUD)
+  const [badges, setBadges] = useState<FloatingBadge[]>(DEFAULT_BADGES);
 
   const categoriesList = [
     'Fashion & Luxury',
@@ -143,6 +169,88 @@ export default function AdminHeroPage() {
     { value: 'brand', label: 'Brand Blue' },
   ];
 
+  const positionOptions = [
+    { value: 'top-left', label: 'Top-Left' },
+    { value: 'bottom-right', label: 'Bottom-Right' },
+    { value: 'top-right', label: 'Top-Right' },
+    { value: 'bottom-left', label: 'Bottom-Left' },
+  ];
+
+  // Helper to sync badges array to formData.floatingBadges JSON
+  const updateBadges = (newBadges: FloatingBadge[]) => {
+    setBadges(newBadges);
+    setFormData((prev) => ({
+      ...prev,
+      floatingBadges: JSON.stringify(newBadges),
+      floatingBadge1Title: newBadges[0]?.title || '',
+      floatingBadge1Sub: newBadges[0]?.subtitle || '',
+      floatingBadge1Icon: newBadges[0]?.icon || 'check',
+      floatingBadge1Color: newBadges[0]?.color || 'emerald',
+      floatingBadge2Title: newBadges[1]?.title || '',
+      floatingBadge2Sub: newBadges[1]?.subtitle || '',
+      floatingBadge2Icon: newBadges[1]?.icon || 'zap',
+      floatingBadge2Color: newBadges[1]?.color || 'brand',
+    }));
+  };
+
+  // 1. ADD NEW FLOATING BADGE (CRUD: Add Badge)
+  const handleAddBadge = () => {
+    const newBadgeId = `badge_${Date.now()}`;
+    const newPositions: ('top-left' | 'bottom-right' | 'top-right' | 'bottom-left')[] = [
+      'top-left', 'bottom-right', 'top-right', 'bottom-left'
+    ];
+    const chosenPos = newPositions[badges.length % newPositions.length];
+
+    const newBadge: FloatingBadge = {
+      id: newBadgeId,
+      title: `Feature Badge #${badges.length + 1}`,
+      subtitle: '100% Quality Assured',
+      icon: 'sparkles',
+      color: 'cyan',
+      position: chosenPos,
+      enabled: true,
+    };
+
+    updateBadges([...badges, newBadge]);
+    setSuccessMsg('✨ New Floating Badge added! Customize it below.');
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // 2. DELETE FLOATING BADGE (CRUD: Delete Badge)
+  const handleDeleteBadge = (id: string) => {
+    if (badges.length <= 1) {
+      alert('You must have at least one floating badge.');
+      return;
+    }
+    const updated = badges.filter((b) => b.id !== id);
+    updateBadges(updated);
+    setSuccessMsg('🗑️ Floating Badge deleted!');
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // 3. DUPLICATE FLOATING BADGE (CRUD: Duplicate Badge)
+  const handleDuplicateBadge = (badge: FloatingBadge) => {
+    const clone: FloatingBadge = {
+      ...badge,
+      id: `badge_${Date.now()}`,
+      title: `${badge.title} (Copy)`,
+    };
+    updateBadges([...badges, clone]);
+    setSuccessMsg('📋 Floating Badge cloned!');
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // 4. UPDATE SINGLE BADGE FIELD (CRUD: Update Badge)
+  const handleBadgeChange = (id: string, field: keyof FloatingBadge, value: any) => {
+    const updated = badges.map((b) => {
+      if (b.id === id) {
+        return { ...b, [field]: value };
+      }
+      return b;
+    });
+    updateBadges(updated);
+  };
+
   // Fetch all hero showcases for CRUD
   const fetchShowcases = async (keepSelectionId?: string) => {
     setLoading(true);
@@ -152,7 +260,6 @@ export default function AdminHeroPage() {
       if (data.showcases && data.showcases.length > 0) {
         setShowcases(data.showcases);
 
-        // Select the requested hero, or the active hero, or the first hero
         let target = data.showcases.find((h: HeroItem) => h.id === keepSelectionId);
         if (!target) {
           target = data.showcases.find((h: HeroItem) => h.isActive) || data.showcases[0];
@@ -160,6 +267,20 @@ export default function AdminHeroPage() {
 
         setSelectedHeroId(target.id);
         setFormData(target);
+
+        // Parse badges from JSON
+        if (target.floatingBadges) {
+          try {
+            const parsed = JSON.parse(target.floatingBadges);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setBadges(parsed);
+            } else {
+              setBadges(DEFAULT_BADGES);
+            }
+          } catch {
+            setBadges(DEFAULT_BADGES);
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching showcases:', err);
@@ -177,11 +298,25 @@ export default function AdminHeroPage() {
   const handleSelectShowcase = (item: HeroItem) => {
     setSelectedHeroId(item.id);
     setFormData(item);
+
+    if (item.floatingBadges) {
+      try {
+        const parsed = JSON.parse(item.floatingBadges);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBadges(parsed);
+        } else {
+          setBadges(DEFAULT_BADGES);
+        }
+      } catch {
+        setBadges(DEFAULT_BADGES);
+      }
+    }
+
     setSuccessMsg(`Switched to editing: "${item.title}"`);
     setTimeout(() => setSuccessMsg(null), 2500);
   };
 
-  // CREATE NEW SHOWCASE (CRUD: Create)
+  // CREATE NEW SHOWCASE (CRUD: Create Showcase)
   const handleAddNewShowcase = async () => {
     setActionLoading(true);
     setErrorMsg(null);
@@ -211,7 +346,7 @@ export default function AdminHeroPage() {
     }
   };
 
-  // DUPLICATE SHOWCASE (CRUD: Clone)
+  // DUPLICATE SHOWCASE
   const handleDuplicateShowcase = async (id: string) => {
     setActionLoading(true);
     setErrorMsg(null);
@@ -235,7 +370,7 @@ export default function AdminHeroPage() {
     }
   };
 
-  // ACTIVATE SHOWCASE (CRUD: Set Live)
+  // ACTIVATE SHOWCASE
   const handleActivateShowcase = async (id: string) => {
     setActionLoading(true);
     setErrorMsg(null);
@@ -259,7 +394,7 @@ export default function AdminHeroPage() {
     }
   };
 
-  // DELETE SHOWCASE (CRUD: Delete)
+  // DELETE SHOWCASE
   const handleDeleteShowcase = async (id: string, title: string) => {
     if (!window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
       return;
@@ -321,7 +456,7 @@ export default function AdminHeroPage() {
     }
   };
 
-  // SAVE & UPDATE SHOWCASE (CRUD: Update)
+  // SAVE & UPDATE SHOWCASE
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -329,16 +464,21 @@ export default function AdminHeroPage() {
     setSuccessMsg(null);
 
     try {
+      const payloadToSend = {
+        ...formData,
+        floatingBadges: JSON.stringify(badges),
+      };
+
       const res = await fetch('/api/admin/hero', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payloadToSend),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save changes');
 
-      setSuccessMsg('🎉 Changes saved and updated successfully!');
+      setSuccessMsg('🎉 Changes saved and published to live website successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
       await fetchShowcases(formData.id);
     } catch (err: any) {
@@ -372,6 +512,20 @@ export default function AdminHeroPage() {
     }
   };
 
+  const getBadgePositionClasses = (pos?: string) => {
+    switch (pos) {
+      case 'top-right':
+        return 'absolute -top-3 -right-3';
+      case 'bottom-left':
+        return 'absolute -bottom-3 -left-3';
+      case 'bottom-right':
+        return 'absolute -bottom-3 -right-3';
+      case 'top-left':
+      default:
+        return 'absolute -top-3 -left-3';
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#080B11]">
       <AdminSidebar />
@@ -383,10 +537,10 @@ export default function AdminHeroPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
               <Sparkles className="w-7 h-7 text-brand-400" />
-              Hero Showcase & Badges Manager (CRUD)
+              Hero Showcase & Floating Badges CRUD
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              Add multiple Hero variations, customize Floating Badges 1 & 2, switch live showcase, edit copy, and delete variations.
+              Add multiple Hero variations, Add/Edit/Delete Floating Badges, choose custom icons, positions and colors.
             </p>
           </div>
 
@@ -406,7 +560,7 @@ export default function AdminHeroPage() {
               target="_blank"
               className="px-4 py-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold"
             >
-              <span>View Homepage</span>
+              <span>View Live Homepage</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
@@ -527,21 +681,8 @@ export default function AdminHeroPage() {
           </div>
         </div>
 
-        {/* 2. NAVIGATION TABS FOR ACTIVE SHOWCASE */}
+        {/* 2. NAVIGATION TABS */}
         <div className="flex flex-wrap gap-2 p-1.5 bg-surface-100/80 rounded-2xl border border-surface-200/80">
-          <button
-            type="button"
-            onClick={() => setActiveTab('reel')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'reel'
-                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
-                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
-            }`}
-          >
-            <Film className="w-4 h-4" />
-            <span>1. 9:16 Hero Reel & Video</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setActiveTab('badges')}
@@ -552,7 +693,20 @@ export default function AdminHeroPage() {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>2. Floating Badges (Badge 1 & 2)</span>
+            <span>1. Floating Badges CRUD ({badges.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('reel')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'reel'
+                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
+                : 'text-gray-400 hover:text-white hover:bg-surface-200/50'
+            }`}
+          >
+            <Film className="w-4 h-4" />
+            <span>2. 9:16 Hero Reel & Video</span>
           </button>
 
           <button
@@ -588,7 +742,169 @@ export default function AdminHeroPage() {
           {/* LEFT: FORM CONTROLS (7 Cols) */}
           <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
             
-            {/* TAB 1: 9:16 HERO REEL & VIDEO */}
+            {/* TAB: FLOATING BADGES CRUD (Add / Edit / Delete Badges) */}
+            {activeTab === 'badges' && (
+              <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-200/50 pb-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      Floating Badges Manager (CRUD)
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Add, remove, re-position, and customize floating glass trust badges with dynamic icons.
+                    </p>
+                  </div>
+
+                  {/* + ADD BADGE BUTTON */}
+                  <button
+                    type="button"
+                    onClick={handleAddBadge}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-105"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add New Badge</span>
+                  </button>
+                </div>
+
+                {/* LIST OF BADGES WITH FULL CRUD EDITORS */}
+                <div className="space-y-4">
+                  {badges.map((badge, index) => (
+                    <div
+                      key={badge.id}
+                      className="p-5 rounded-2xl bg-surface-100/80 border border-surface-200/80 space-y-4 hover:border-brand-500/50 transition-all"
+                    >
+                      {/* Badge Header Row */}
+                      <div className="flex items-center justify-between gap-2 border-b border-surface-200/50 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(badge.color)}`}>
+                            {renderBadgeIcon(badge.icon)}
+                          </span>
+                          <span className="text-xs font-extrabold text-white">
+                            Badge #{index + 1}: {badge.title || 'Untitled Badge'}
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-200 text-gray-300">
+                            {badge.position}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Enable/Disable toggle */}
+                          <button
+                            type="button"
+                            onClick={() => handleBadgeChange(badge.id, 'enabled', !badge.enabled)}
+                            className={`text-xs px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 ${
+                              badge.enabled !== false
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-surface-200 text-gray-500'
+                            }`}
+                          >
+                            {badge.enabled !== false ? 'Enabled' : 'Disabled'}
+                          </button>
+
+                          {/* Clone Button */}
+                          <button
+                            type="button"
+                            title="Duplicate badge"
+                            onClick={() => handleDuplicateBadge(badge)}
+                            className="p-1.5 rounded-lg bg-surface-200 hover:bg-surface-300 text-gray-300 hover:text-white transition-colors"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete Badge Button */}
+                          <button
+                            type="button"
+                            title="Delete badge"
+                            onClick={() => handleDeleteBadge(badge.id)}
+                            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fields: Title & Subtitle */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-gray-300">Badge Title *</label>
+                          <input
+                            type="text"
+                            required
+                            value={badge.title}
+                            onChange={(e) => handleBadgeChange(badge.id, 'title', e.target.value)}
+                            placeholder="e.g. Commercial Rights"
+                            className="w-full px-3.5 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs font-bold focus:outline-none focus:border-brand-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-gray-300">Badge Subtitle *</label>
+                          <input
+                            type="text"
+                            required
+                            value={badge.subtitle}
+                            onChange={(e) => handleBadgeChange(badge.id, 'subtitle', e.target.value)}
+                            placeholder="e.g. 100% Monetization"
+                            className="w-full px-3.5 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Selectors: Icon, Color, Position */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Icon</label>
+                          <select
+                            value={badge.icon}
+                            onChange={(e) => handleBadgeChange(badge.id, 'icon', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                          >
+                            {iconOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Color Theme</label>
+                          <select
+                            value={badge.color}
+                            onChange={(e) => handleBadgeChange(badge.id, 'color', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
+                          >
+                            {colorOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Screen Position</label>
+                          <select
+                            value={badge.position}
+                            onChange={(e) => handleBadgeChange(badge.id, 'position', e.target.value as any)}
+                            className="w-full px-3 py-2 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 font-mono"
+                          >
+                            {positionOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: 9:16 HERO REEL & VIDEO */}
             {activeTab === 'reel' && (
               <div className="space-y-6">
                 <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
@@ -810,172 +1126,7 @@ export default function AdminHeroPage() {
               </div>
             )}
 
-            {/* TAB 2: FLOATING BADGES (BADGE 1 & 2) */}
-            {activeTab === 'badges' && (
-              <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-6">
-                <div>
-                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    Customize Floating Badges (1 & 2)
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Edit title, subtitle, icon, and colors of the floating badges attached to this showcase.
-                  </p>
-                </div>
-
-                {/* Floating Badge 1 Configuration */}
-                <div className="space-y-4 p-5 rounded-2xl bg-surface-100/70 border border-emerald-500/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4" />
-                      Floating Badge 1 (Top-Left Position)
-                    </span>
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300">
-                      Live Dynamic
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Title *</label>
-                      <input
-                        type="text"
-                        name="floatingBadge1Title"
-                        required
-                        value={formData.floatingBadge1Title}
-                        onChange={handleChange}
-                        placeholder="Commercial Rights"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs font-bold focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Subtitle *</label>
-                      <input
-                        type="text"
-                        name="floatingBadge1Sub"
-                        required
-                        value={formData.floatingBadge1Sub}
-                        onChange={handleChange}
-                        placeholder="100% Monetization"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Icon</label>
-                      <select
-                        name="floatingBadge1Icon"
-                        value={formData.floatingBadge1Icon}
-                        onChange={handleChange}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      >
-                        {iconOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 1 Color Theme</label>
-                      <select
-                        name="floatingBadge1Color"
-                        value={formData.floatingBadge1Color}
-                        onChange={handleChange}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      >
-                        {colorOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating Badge 2 Configuration */}
-                <div className="space-y-4 p-5 rounded-2xl bg-surface-100/70 border border-brand-500/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-brand-400 flex items-center gap-2">
-                      <Zap className="w-4 h-4" />
-                      Floating Badge 2 (Bottom-Right Position)
-                    </span>
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300">
-                      Live Dynamic
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Title *</label>
-                      <input
-                        type="text"
-                        name="floatingBadge2Title"
-                        required
-                        value={formData.floatingBadge2Title}
-                        onChange={handleChange}
-                        placeholder="AI Voiceover"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs font-bold focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Subtitle *</label>
-                      <input
-                        type="text"
-                        name="floatingBadge2Sub"
-                        required
-                        value={formData.floatingBadge2Sub}
-                        onChange={handleChange}
-                        placeholder="Hindi & English"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Icon</label>
-                      <select
-                        name="floatingBadge2Icon"
-                        value={formData.floatingBadge2Icon}
-                        onChange={handleChange}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      >
-                        {iconOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-300">Badge 2 Color Theme</label>
-                      <select
-                        name="floatingBadge2Color"
-                        value={formData.floatingBadge2Color}
-                        onChange={handleChange}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#080B11] border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
-                      >
-                        {colorOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: HERO LEFT HEADLINES & BUTTONS */}
+            {/* TAB: HERO LEFT HEADLINES & BUTTONS */}
             {activeTab === 'copy' && (
               <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
                 <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
@@ -1089,7 +1240,7 @@ export default function AdminHeroPage() {
               </div>
             )}
 
-            {/* TAB 4: KEY STATS COUNTERS & RATING */}
+            {/* TAB: KEY STATS COUNTERS & RATING */}
             {activeTab === 'stats' && (
               <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
                 <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
@@ -1193,7 +1344,7 @@ export default function AdminHeroPage() {
                 ) : (
                   <>
                     <Save className="w-5 h-5" />
-                    <span>Save "{formData.title || 'Showcase'}"</span>
+                    <span>Save "{formData.title || 'Showcase'}" (All Badges & Content)</span>
                   </>
                 )}
               </button>
@@ -1281,35 +1432,26 @@ export default function AdminHeroPage() {
                 </div>
               </div>
 
-              {/* Floating Badge 1 (Top-Left) */}
-              <div className="absolute -top-3 -left-3 glass-panel p-2.5 rounded-xl border-brand-400/40 flex items-center gap-2 shadow-xl animate-float">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(formData.floatingBadge1Color)}`}>
-                  {renderBadgeIcon(formData.floatingBadge1Icon)}
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-white leading-tight">
-                    {formData.floatingBadge1Title || 'Commercial Rights'}
+              {/* DYNAMIC FLOATING BADGES RENDERED FROM CRUD STATE */}
+              {badges.filter((b) => b.enabled !== false).map((badge, idx) => (
+                <div
+                  key={badge.id || idx}
+                  className={`${getBadgePositionClasses(badge.position)} glass-panel p-2.5 rounded-xl border-brand-400/40 flex items-center gap-2 shadow-xl animate-float z-20`}
+                  style={{ animationDelay: `${idx * 1.5}s` }}
+                >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(badge.color)}`}>
+                    {renderBadgeIcon(badge.icon)}
                   </div>
-                  <div className="text-[9px] text-gray-400 leading-tight">
-                    {formData.floatingBadge1Sub || '100% Monetization'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Badge 2 (Bottom-Right) */}
-              <div className="absolute -bottom-3 -right-3 glass-panel p-2.5 rounded-xl border-brand-400/40 flex items-center gap-2 shadow-xl animate-float" style={{ animationDelay: '2s' }}>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${getBadgeColorClass(formData.floatingBadge2Color)}`}>
-                  {renderBadgeIcon(formData.floatingBadge2Icon || 'zap')}
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-white leading-tight">
-                    {formData.floatingBadge2Title || 'AI Voiceover'}
-                  </div>
-                  <div className="text-[9px] text-gray-400 leading-tight">
-                    {formData.floatingBadge2Sub || 'Hindi & English'}
+                  <div>
+                    <div className="text-[11px] font-bold text-white leading-tight">
+                      {badge.title}
+                    </div>
+                    <div className="text-[9px] text-gray-400 leading-tight">
+                      {badge.subtitle}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
 
             </div>
 

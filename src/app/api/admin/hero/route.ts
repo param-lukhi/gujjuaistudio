@@ -34,6 +34,28 @@ const DEFAULT_HERO_DATA = {
   buttonText: 'View All 7 Categories',
   buttonLink: '/portfolio',
 
+  // Floating Badges list
+  floatingBadges: JSON.stringify([
+    {
+      id: 'badge-1',
+      title: 'Commercial Rights',
+      subtitle: '100% Monetization',
+      icon: 'check',
+      color: 'emerald',
+      position: 'top-left',
+      enabled: true,
+    },
+    {
+      id: 'badge-2',
+      title: 'AI Voiceover',
+      subtitle: 'Hindi & English',
+      icon: 'zap',
+      color: 'brand',
+      position: 'bottom-right',
+      enabled: true,
+    },
+  ]),
+
   // Floating Badge 1 (Top-Left)
   floatingBadge1Title: 'Commercial Rights',
   floatingBadge1Sub: '100% Monetization',
@@ -156,6 +178,9 @@ export async function POST(request: NextRequest) {
       thumbnailUrl: body.thumbnailUrl ?? null,
       buttonText: body.buttonText ?? DEFAULT_HERO_DATA.buttonText,
       buttonLink: body.buttonLink ?? DEFAULT_HERO_DATA.buttonLink,
+
+      // Floating Badges dynamic list
+      floatingBadges: typeof body.floatingBadges === 'string' ? body.floatingBadges : JSON.stringify(body.floatingBadges || []),
 
       // Floating Badge 1
       floatingBadge1Title: body.floatingBadge1Title ?? DEFAULT_HERO_DATA.floatingBadge1Title,
