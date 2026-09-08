@@ -1,10 +1,12 @@
 import { getFirebaseApp } from '@/lib/firebase';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { uploadToSupabaseStorage } from '@/lib/supabaseStorage';
 
 export interface UploadOptions {
   folder?: string;
   onProgress?: (percent: number, statusText?: string) => void;
 }
+
 
 /**
  * Resizes and compresses an image in the browser for ultra-fast instant uploads (<50ms)
@@ -113,59 +115,72 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     }
   }
 
-  // --- PATH 2: DIRECT CLIENT-TO-FIREBASE CLOUD STORAGE (UP TO 500 MB) ---
+  // --- PATH 2: CLOUD VIDEO STORAGE (SUPABASE & FIREBASE) ---
   if (isVideo || file.size > 4.5 * 1024 * 1024) {
+    // 2A. Attempt Supabase Storage (50MB Free, No Credit Card / Billing Required)
+    try {
+      const supabaseUrl = await uploadToSupabaseStorage(
+        file,
+        options.folder || 'videos',
+        options.onProgress
+      );
+      if (supabaseUrl) return supabaseUrl;
+    } catch (supabaseErr: any) {
+      if (supabaseErr.message !== 'SUPABASE_ANON_KEY_MISSING') {
+        console.warn('Supabase storage attempt:', supabaseErr.message || supabaseErr);
+      }
+    }
+
+    // 2B. Attempt Firebase Cloud Storage
     try {
       const app = getFirebaseApp();
-      if (!app) {
-        throw new Error('Firebase client app is not initialized.');
+      if (app) {
+        const storage = getStorage(app);
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storageRef = ref(storage, `${options.folder || 'videos'}/${Date.now()}_${cleanName}`);
+
+        const uploadTask = uploadBytesResumable(storageRef, file, {
+          contentType: file.type || 'video/mp4',
+        });
+
+        return await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              if (snapshot.totalBytes > 0) {
+                const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
+                const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
+                const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
+                options.onProgress?.(progress, status);
+              }
+            },
+            (error: any) => {
+              console.error('Firebase Storage upload error:', error);
+              if (error.code === 'storage/unauthorized') {
+                reject(
+                  new Error(
+                    'Firebase Storage permission denied. Please enable public write access in Firebase Console > Storage > Rules (set: allow read, write: if true;) or use Video Link.'
+                  )
+                );
+              } else if (error.code === 'storage/canceled') {
+                reject(new Error('Upload was canceled.'));
+              } else {
+                reject(new Error(error.message || 'Firebase storage upload failed.'));
+              }
+            },
+            async () => {
+              try {
+                options.onProgress?.(100, 'Finalizing download URL...');
+                const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadUrl);
+              } catch (urlErr: any) {
+                reject(urlErr);
+              }
+            }
+          );
+        });
       }
-
-      const storage = getStorage(app);
-      const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageRef = ref(storage, `${options.folder || 'videos'}/${Date.now()}_${cleanName}`);
-
-      const uploadTask = uploadBytesResumable(storageRef, file, {
-        contentType: file.type || 'video/mp4',
-      });
-
-      return await new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            if (snapshot.totalBytes > 0) {
-              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
-              const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
-              const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
-              options.onProgress?.(progress, status);
-            }
-          },
-          (error: any) => {
-            console.error('Firebase Storage upload error:', error);
-            if (error.code === 'storage/unauthorized') {
-              reject(
-                new Error(
-                  'Firebase Storage permission denied. Please enable public write access in Firebase Console > Storage > Rules (set: allow read, write: if true;) or use Video Link.'
-                )
-              );
-            } else if (error.code === 'storage/canceled') {
-              reject(new Error('Upload was canceled.'));
-            } else {
-              reject(new Error(error.message || 'Firebase storage upload failed.'));
-            }
-          },
-          async () => {
-            try {
-              options.onProgress?.(100, 'Finalizing download URL...');
-              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadUrl);
-            } catch (urlErr: any) {
-              reject(urlErr);
-            }
-          }
-        );
-      });
     } catch (firebaseErr: any) {
       console.warn('Direct Firebase Storage upload error:', firebaseErr);
       
@@ -189,5 +204,6 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   // --- PATH 3: SMALL LOCAL STREAM FALLBACK ---
   return await convertFileToDataUrl(file);
 }
+
 
 
