@@ -40,8 +40,8 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Category specific gradients & subtle themes for high-end aesthetic
-  const getCategoryGradient = (cat: string) => {
-    switch (cat?.toLowerCase()) {
+  const getCategoryGradient = (cat?: string) => {
+    switch ((cat || '').toLowerCase()) {
       case 'beauty':
         return 'from-pink-600/40 via-purple-900/50 to-[#080B11]';
       case 'fashion':
@@ -59,7 +59,9 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
     }
   };
 
-  const hasValidThumb = Boolean(item.thumbnailUrl) && !imageError;
+  const categoryName = item?.category || 'AI Reel';
+  const itemTitle = item?.title || 'Commercial AI Video';
+  const hasValidThumb = Boolean(item?.thumbnailUrl) && !imageError;
 
   return (
     <div
@@ -67,11 +69,11 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
       className="group relative rounded-2xl overflow-hidden glass-panel border border-surface-200/60 hover:border-brand-500/50 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-brand-500/20 hover:-translate-y-1"
     >
       {/* Reel Card Aspect Ratio */}
-      <div className={`relative aspect-[9/16] overflow-hidden bg-gradient-to-b ${getCategoryGradient(item.category)}`}>
+      <div className={`relative aspect-[9/16] overflow-hidden bg-gradient-to-b ${getCategoryGradient(categoryName)}`}>
         {hasValidThumb ? (
           <img
-            src={item.thumbnailUrl}
-            alt={item.title}
+            src={item?.thumbnailUrl}
+            alt={itemTitle}
             onError={() => setImageError(true)}
             onLoad={() => setImageLoaded(true)}
             className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${
@@ -86,10 +88,10 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
               <Sparkles className="w-8 h-8" />
             </div>
             <span className="text-[11px] font-bold tracking-widest uppercase text-brand-300/90 mb-1">
-              {item.category} • AI Reel
+              {categoryName} • AI Reel
             </span>
             <p className="text-xs font-semibold text-white/90 line-clamp-2 px-2">
-              {item.title}
+              {itemTitle}
             </p>
           </div>
         )}
@@ -100,11 +102,11 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
           <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-brand-600/90 text-white backdrop-blur-md border border-brand-400/40">
-            {item.category}
+            {categoryName}
           </span>
           <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-gray-200 bg-black/60 border border-white/10 flex items-center gap-1">
             <Clock className="w-3 h-3 text-brand-400" />
-            {item.duration || '30s'}
+            {item?.duration || '30s'}
           </span>
         </div>
 
@@ -118,11 +120,11 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
         {/* Bottom Text Content */}
         <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5 z-10">
           <h3 className="text-sm font-bold text-white leading-snug group-hover:text-brand-300 transition-colors">
-            {item.title}
+            {itemTitle}
           </h3>
           <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1">
             <span className="text-gray-300">Click to Play AI Video</span>
-            {item.views !== undefined && (
+            {item?.views !== undefined && (
               <span className="flex items-center gap-1 text-gray-400 font-mono">
                 <Eye className="w-3 h-3 text-brand-400" />
                 {item.views} views
@@ -145,9 +147,11 @@ export default function PortfolioGrid({
   const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [selectedVideo, setSelectedVideo] = useState<PortfolioItemType | null>(null);
 
+  const safeList = Array.isArray(items) ? items : [];
+
   const filteredItems = activeCategory === 'All'
-    ? items
-    : items.filter(item => item.category.toLowerCase() === activeCategory.toLowerCase());
+    ? safeList
+    : safeList.filter(item => (item?.category || '').toLowerCase() === (activeCategory || '').toLowerCase());
 
   return (
     <section className="py-16 md:py-24 relative">
@@ -195,9 +199,9 @@ export default function PortfolioGrid({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredItems.map((item) => (
+            {filteredItems.map((item, idx) => (
               <ReelCard
-                key={item.id}
+                key={item?.id || `reel-${idx}`}
                 item={item}
                 onSelect={() => setSelectedVideo(item)}
               />

@@ -213,35 +213,39 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
   // Parse dynamic floating badges
   let badgesList: FloatingBadgeItem[] = [];
   try {
-    if (heroData.floatingBadges) {
-      badgesList = JSON.parse(heroData.floatingBadges);
+    if (heroData?.floatingBadges) {
+      if (typeof heroData.floatingBadges === 'string') {
+        badgesList = JSON.parse(heroData.floatingBadges);
+      } else if (Array.isArray(heroData.floatingBadges)) {
+        badgesList = heroData.floatingBadges;
+      }
     }
   } catch (e) {}
 
-  if (!badgesList || badgesList.length === 0) {
+  if (!badgesList || !Array.isArray(badgesList) || badgesList.length === 0) {
     badgesList = [
       {
         id: 'b-1',
-        title: heroData.floatingBadge1Title || 'Commercial Rights',
-        subtitle: heroData.floatingBadge1Sub || '100% Monetization',
-        icon: heroData.floatingBadge1Icon || 'check',
-        color: heroData.floatingBadge1Color || 'emerald',
+        title: heroData?.floatingBadge1Title || 'Commercial Rights',
+        subtitle: heroData?.floatingBadge1Sub || '100% Monetization',
+        icon: heroData?.floatingBadge1Icon || 'check',
+        color: heroData?.floatingBadge1Color || 'emerald',
         position: 'top-left',
         enabled: true,
       },
       {
         id: 'b-2',
-        title: heroData.floatingBadge2Title || 'AI Voiceover',
-        subtitle: heroData.floatingBadge2Sub || 'Hindi & English',
-        icon: heroData.floatingBadge2Icon || 'zap',
-        color: heroData.floatingBadge2Color || 'brand',
+        title: heroData?.floatingBadge2Title || 'AI Voiceover',
+        subtitle: heroData?.floatingBadge2Sub || 'Hindi & English',
+        icon: heroData?.floatingBadge2Icon || 'zap',
+        color: heroData?.floatingBadge2Color || 'brand',
         position: 'bottom-right',
         enabled: true,
       },
     ];
   }
 
-  const activeBadges = badgesList.filter((b) => b.enabled !== false);
+  const activeBadges = Array.isArray(badgesList) ? badgesList.filter((b) => b && b.enabled !== false) : [];
 
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-hero-gradient">

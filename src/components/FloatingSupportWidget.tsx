@@ -103,26 +103,32 @@ export default function FloatingSupportWidget() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.replies) {
-            const serverReplies: any[] = JSON.parse(data.replies);
+            let serverReplies: any[] = [];
+            if (typeof data.replies === 'string') {
+              try { serverReplies = JSON.parse(data.replies); } catch {}
+            } else if (Array.isArray(data.replies)) {
+              serverReplies = data.replies;
+            }
+
             if (Array.isArray(serverReplies) && serverReplies.length > 0) {
               setChatBubbles((prev) => {
                 const existingAdminReplyIds = new Set(
-                  prev.filter((b) => b.sender === 'ADMIN').map((b) => b.id)
+                  prev.filter((b) => b?.sender === 'ADMIN').map((b) => b.id)
                 );
                 const newBubbles = [...prev];
                 let hasNew = false;
 
                 // Only take messages explicitly sent by ADMIN
                 serverReplies
-                  .filter((rep) => rep.sender === 'ADMIN')
+                  .filter((rep) => rep && rep.sender === 'ADMIN')
                   .forEach((rep) => {
-                    if (!existingAdminReplyIds.has(rep.id)) {
+                    if (rep.id && !existingAdminReplyIds.has(rep.id)) {
                       hasNew = true;
                       newBubbles.push({
                         id: rep.id,
                         sender: 'ADMIN',
                         senderName: rep.senderName || 'Gujju AI Studio Support',
-                        text: rep.text,
+                        text: rep.text || '',
                         createdAt: rep.createdAt || new Date().toISOString(),
                       });
                     }
