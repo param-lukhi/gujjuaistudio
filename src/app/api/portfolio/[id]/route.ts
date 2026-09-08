@@ -13,19 +13,19 @@ export async function PUT(
     const item = await prisma.portfolioItem.update({
       where: { id },
       data: {
-        ...(title && { title }),
-        ...(category && { category }),
-        ...(videoUrl && { videoUrl }),
-        ...(thumbnailUrl && { thumbnailUrl }),
-        ...(duration && { duration }),
+        ...(title !== undefined && { title }),
+        ...(category !== undefined && { category }),
+        ...(videoUrl !== undefined && { videoUrl }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl }),
+        ...(duration !== undefined && { duration }),
         ...(featured !== undefined && { featured: Boolean(featured) }),
       },
     });
 
     return NextResponse.json({ success: true, item });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating portfolio item:', error);
-    return NextResponse.json({ error: 'Failed to update portfolio item' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to update portfolio item' }, { status: 500 });
   }
 }
 

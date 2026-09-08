@@ -102,107 +102,126 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   const isImage = file.type.startsWith('image/');
   const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
 
-  // --- FAST-PATH 1: IMAGES (Avatars, Cover Thumbnails, Screenshots, Proofs) ---
-  if (isImage) {
+  // --- TIER 1: FAST-PATH FOR FILES UNDER 4.5MB (INSTANT SERVER / LOCAL / DATA URL) ---
+  if (file.size <= 4.5 * 1024 * 1024) {
+    options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
+
+    // 1A. Try server /api/upload endpoint (saves to /uploads/ or Cloudinary or returns data URI)
     try {
-      options.onProgress?.(50, 'Optimizing image...');
-      const dataUrl = await compressImageToDataUrl(file);
-      options.onProgress?.(100, 'Done');
-      return dataUrl;
-    } catch (err) {
-      console.warn('Image compression fallback to standard FileReader:', err);
-      return await convertFileToDataUrl(file);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.url) {
+          options.onProgress?.(100, 'Uploaded successfully');
+          return json.url;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Server upload endpoint attempt failed:', apiErr);
+    }
+
+    // 1B. Fast client-side image optimizer (if image)
+    if (isImage) {
+      try {
+        options.onProgress?.(70, 'Optimizing image...');
+        const dataUrl = await compressImageToDataUrl(file);
+        options.onProgress?.(100, 'Done');
+        return dataUrl;
+      } catch (err) {
+        console.warn('Image compression fallback:', err);
+      }
+    }
+
+    // 1C. Instant browser FileReader Data URL fallback for videos/images under 4.5MB
+    options.onProgress?.(90, 'Finalizing video stream...');
+    const dataUrl = await convertFileToDataUrl(file);
+    options.onProgress?.(100, 'Ready');
+    return dataUrl;
+  }
+
+  // --- TIER 2: CLOUD STORAGE FOR LARGE FILES (> 4.5MB UP TO 500MB) ---
+
+  // 2A. Attempt Supabase Storage
+  try {
+    const supabaseUrl = await uploadToSupabaseStorage(
+      file,
+      options.folder || (isVideo ? 'videos' : 'thumbnails'),
+      options.onProgress
+    );
+    if (supabaseUrl) return supabaseUrl;
+  } catch (supabaseErr: any) {
+    if (supabaseErr.message !== 'SUPABASE_ANON_KEY_MISSING') {
+      console.warn('Supabase storage attempt:', supabaseErr.message || supabaseErr);
     }
   }
 
-  // --- PATH 2: CLOUD VIDEO STORAGE (SUPABASE & FIREBASE) ---
-  if (isVideo || file.size > 4.5 * 1024 * 1024) {
-    // 2A. Attempt Supabase Storage (50MB Free, No Credit Card / Billing Required)
-    try {
-      const supabaseUrl = await uploadToSupabaseStorage(
-        file,
-        options.folder || 'videos',
-        options.onProgress
-      );
-      if (supabaseUrl) return supabaseUrl;
-    } catch (supabaseErr: any) {
-      if (supabaseErr.message !== 'SUPABASE_ANON_KEY_MISSING') {
-        console.warn('Supabase storage attempt:', supabaseErr.message || supabaseErr);
-      }
-    }
+  // 2B. Attempt Firebase Cloud Storage with a strict 6-second progress watchdog
+  try {
+    const app = getFirebaseApp();
+    if (app) {
+      const storage = getStorage(app);
+      const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storageRef = ref(storage, `${options.folder || (isVideo ? 'videos' : 'thumbnails')}/${Date.now()}_${cleanName}`);
 
-    // 2B. Attempt Firebase Cloud Storage
-    try {
-      const app = getFirebaseApp();
-      if (app) {
-        const storage = getStorage(app);
-        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const storageRef = ref(storage, `${options.folder || 'videos'}/${Date.now()}_${cleanName}`);
+      const uploadTask = uploadBytesResumable(storageRef, file, {
+        contentType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+      });
 
-        const uploadTask = uploadBytesResumable(storageRef, file, {
-          contentType: file.type || 'video/mp4',
-        });
-
-        return await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              if (snapshot.totalBytes > 0) {
-                const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
-                const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
-                const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
-                options.onProgress?.(progress, status);
-              }
-            },
-            (error: any) => {
-              console.error('Firebase Storage upload error:', error);
-              if (error.code === 'storage/unauthorized') {
-                reject(
-                  new Error(
-                    'Firebase Storage permission denied. Please enable public write access in Firebase Console > Storage > Rules (set: allow read, write: if true;) or use Video Link.'
-                  )
-                );
-              } else if (error.code === 'storage/canceled') {
-                reject(new Error('Upload was canceled.'));
-              } else {
-                reject(new Error(error.message || 'Firebase storage upload failed.'));
-              }
-            },
-            async () => {
-              try {
-                options.onProgress?.(100, 'Finalizing download URL...');
-                const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadUrl);
-              } catch (urlErr: any) {
-                reject(urlErr);
-              }
-            }
-          );
-        });
-      }
-    } catch (firebaseErr: any) {
-      console.warn('Direct Firebase Storage upload error:', firebaseErr);
-      
-      // If small enough, try server endpoint fallback
-      if (file.size <= 4.5 * 1024 * 1024) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const json = await res.json();
-            if (json.url) return json.url;
+      const uploadPromise = new Promise<string>((resolve, reject) => {
+        let hasTransferred = false;
+        const watchdogTimer = setTimeout(() => {
+          if (!hasTransferred) {
+            try {
+              uploadTask.cancel();
+            } catch {}
+            reject(new Error('FIREBASE_STORAGE_TIMED_OUT'));
           }
-        } catch {}
-      }
+        }, 6000); // 6s watchdog: if no bytes transferred due to permission/CORS hanging, abort & fallback
 
-      throw firebaseErr;
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            if (snapshot.bytesTransferred > 0) {
+              hasTransferred = true;
+              clearTimeout(watchdogTimer);
+              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+              const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
+              const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
+              const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
+              options.onProgress?.(progress, status);
+            }
+          },
+          (error: any) => {
+            clearTimeout(watchdogTimer);
+            console.warn('Firebase Storage upload error:', error);
+            reject(error);
+          },
+          async () => {
+            clearTimeout(watchdogTimer);
+            try {
+              options.onProgress?.(100, 'Finalizing download URL...');
+              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadUrl);
+            } catch (urlErr: any) {
+              reject(urlErr);
+            }
+          }
+        );
+      });
+
+      return await uploadPromise;
     }
+  } catch (firebaseErr: any) {
+    console.warn('Firebase Storage upload failed or timed out, proceeding to fallback:', firebaseErr);
   }
 
-  // --- PATH 3: SMALL LOCAL STREAM FALLBACK ---
-  return await convertFileToDataUrl(file);
+  // --- TIER 3: UNIVERSAL SAFE STREAM FALLBACK ---
+  options.onProgress?.(90, 'Loading media stream...');
+  const finalDataUrl = await convertFileToDataUrl(file);
+  options.onProgress?.(100, 'Ready');
+  return finalDataUrl;
 }
 
 

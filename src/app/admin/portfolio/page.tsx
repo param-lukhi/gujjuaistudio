@@ -48,6 +48,7 @@ export default function ManagePortfolioPage() {
   const [videoUploadStatus, setVideoUploadStatus] = useState('');
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +112,8 @@ export default function ManagePortfolioPage() {
   const handleOpenEditModal = (item: any) => {
     setEditingItem(item);
     setVideoMode(item.videoUrl?.startsWith('/uploads') ? 'upload' : 'link');
-    setThumbMode(item.thumbnailUrl?.startsWith('/uploads') ? 'upload' : 'link');
+    // Default to 'upload' mode so thumbnail preview & Replace File button are immediately accessible
+    setThumbMode('upload');
     setUploadError(null);
     setFormData({
       title: item.title || '',
@@ -162,12 +164,14 @@ export default function ManagePortfolioPage() {
         setUploadingVideo(false);
         setVideoUploadProgress(0);
         setVideoUploadStatus('');
+        if (videoInputRef.current) videoInputRef.current.value = '';
       }
-      if (type === 'thumbnail') setUploadingThumb(false);
+      if (type === 'thumbnail') {
+        setUploadingThumb(false);
+        if (thumbInputRef.current) thumbInputRef.current.value = '';
+      }
     }
   };
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,32 +185,45 @@ export default function ManagePortfolioPage() {
     }
 
     try {
+      let res;
       if (editingItem) {
-        await fetch(`/api/portfolio/${editingItem.id}`, {
+        res = await fetch(`/api/portfolio/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
         });
       } else {
-        await fetch('/api/portfolio', {
+        res = await fetch('/api/portfolio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
         });
       }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save portfolio reel. Please try again.');
+      }
+
+      setSuccessMsg(editingItem ? '🎉 AI Reel details and thumbnail updated successfully!' : '🎉 New AI Reel added to Portfolio!');
+      setTimeout(() => setSuccessMsg(null), 4000);
       setModalOpen(false);
       fetchItems();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setUploadError('Failed to save portfolio reel. Please try again.');
+      setUploadError(e.message || 'Failed to save portfolio reel. Please try again.');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this reel from portfolio?')) return;
     try {
-      await fetch(`/api/portfolio/${id}`, { method: 'DELETE' });
-      fetchItems();
+      const res = await fetch(`/api/portfolio/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSuccessMsg('Portfolio reel deleted.');
+        setTimeout(() => setSuccessMsg(null), 3000);
+        fetchItems();
+      }
     } catch (e) {
       console.error(e);
     }
@@ -242,6 +259,14 @@ export default function ManagePortfolioPage() {
             Add New AI Reel
           </button>
         </div>
+
+        {/* Feedback Banner */}
+        {successMsg && (
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-emerald-400 text-xs font-semibold animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
 
         {/* Portfolio Table / Grid */}
         <div className="glass-panel p-6 rounded-3xl border border-surface-200/70 space-y-4">

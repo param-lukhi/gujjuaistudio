@@ -53,19 +53,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. For images under 4MB, return high-speed Base64 data URI
-    if (file.type.startsWith('image/') || (!file.type.startsWith('video/') && buffer.length <= 4 * 1024 * 1024)) {
-      const mimeType = file.type || 'image/jpeg';
+    // 3. For any media file under 4.5MB (Images, Audio, Reels/Videos), return high-speed Base64 data URI
+    if (buffer.length <= 4.5 * 1024 * 1024) {
+      const mimeType = file.type || (file.name.toLowerCase().endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
       const base64 = buffer.toString('base64');
       const dataUri = `data:${mimeType};base64,${base64}`;
       return NextResponse.json({ success: true, url: dataUri });
     }
 
-    // 4. If video on serverless without cloud storage
+    // 4. If large video on serverless without cloud storage
     return NextResponse.json(
       {
         error:
-          'Direct server video upload requires Cloud storage configuration. Please paste a direct video link or configure Cloudinary / Firebase storage.',
+          'Video file exceeds serverless direct upload limit (4.5MB). Please use Video Link or configure Cloud storage.',
       },
       { status: 400 }
     );
