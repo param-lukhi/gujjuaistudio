@@ -3,15 +3,14 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 
 export interface UploadOptions {
   folder?: string;
-  onProgress?: (percent: number) => void;
+  onProgress?: (percent: number, statusText?: string) => void;
 }
 
 /**
- * Resizes and compresses an image in the browser for ultra-fast instant uploads
+ * Resizes and compresses an image in the browser for ultra-fast instant uploads (<50ms)
  */
 async function compressImageToDataUrl(file: File, maxWidth = 1400, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
-    // If SVG or GIF, preserve original format as data url
     if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -43,7 +42,6 @@ async function compressImageToDataUrl(file: File, maxWidth = 1400, quality = 0.8
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        // Fallback to simple FileReader
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
@@ -70,7 +68,7 @@ async function compressImageToDataUrl(file: File, maxWidth = 1400, quality = 0.8
 }
 
 /**
- * Converts a small video to Data URL in browser
+ * Converts a small file directly to Data URL in browser
  */
 async function convertFileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -83,13 +81,20 @@ async function convertFileToDataUrl(file: File): Promise<string> {
 
 /**
  * Universal media uploader:
- * 1. For images: Instantly optimizes and generates Data URL in ~50ms (never hangs, 100% reliable)
- * 2. For videos <= 4MB: Converts directly or sends to /api/upload
- * 3. For videos > 4MB: Attempts Firebase Storage with strict 5s timeout, with clear guidance on failure
+ * 1. For images: Instant in-browser canvas optimizer (< 50ms, 100% reliable)
+ * 2. For videos (up to 500MB): Direct Client-to-Firebase Cloud Storage with live progress & transfer stats
+ * 3. Safe fallback for small files
  */
 export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
   if (!file) {
     throw new Error('No file selected.');
+  }
+
+  const maxAllowedSize = 500 * 1024 * 1024; // 500 MB max limit
+  if (file.size > maxAllowedSize) {
+    throw new Error(
+      `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds maximum limit (500MB). Please select a file under 500MB.`
+    );
   }
 
   const isImage = file.type.startsWith('image/');
@@ -98,9 +103,9 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   // --- FAST-PATH 1: IMAGES (Avatars, Cover Thumbnails, Screenshots, Proofs) ---
   if (isImage) {
     try {
-      options.onProgress?.(50);
+      options.onProgress?.(50, 'Optimizing image...');
       const dataUrl = await compressImageToDataUrl(file);
-      options.onProgress?.(100);
+      options.onProgress?.(100, 'Done');
       return dataUrl;
     } catch (err) {
       console.warn('Image compression fallback to standard FileReader:', err);
@@ -108,43 +113,14 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     }
   }
 
-  // --- FAST-PATH 2: SMALL VIDEOS (<= 4.5MB) ---
-  const maxDirectSize = 4.5 * 1024 * 1024;
-  if (isVideo && file.size <= maxDirectSize) {
+  // --- PATH 2: DIRECT CLIENT-TO-FIREBASE CLOUD STORAGE (UP TO 500 MB) ---
+  if (isVideo || file.size > 4.5 * 1024 * 1024) {
     try {
-      options.onProgress?.(40);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', options.folder || 'videos');
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.url) {
-          options.onProgress?.(100);
-          return json.url;
-        }
+      const app = getFirebaseApp();
+      if (!app) {
+        throw new Error('Firebase client app is not initialized.');
       }
 
-      // If /api/upload didn't return url, use Base64 video Data URL
-      options.onProgress?.(80);
-      const videoDataUrl = await convertFileToDataUrl(file);
-      options.onProgress?.(100);
-      return videoDataUrl;
-    } catch {
-      return await convertFileToDataUrl(file);
-    }
-  }
-
-  // --- PATH 3: LARGE VIDEOS (> 4.5MB) ---
-  // Attempt Firebase Storage with a strict 5-second timeout
-  try {
-    const app = getFirebaseApp();
-    if (app) {
       const storage = getStorage(app);
       const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const storageRef = ref(storage, `${options.folder || 'videos'}/${Date.now()}_${cleanName}`);
@@ -153,45 +129,65 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
         contentType: file.type || 'video/mp4',
       });
 
-      const uploadPromise = new Promise<string>((resolve, reject) => {
+      return await new Promise<string>((resolve, reject) => {
         uploadTask.on(
           'state_changed',
           (snapshot) => {
-            if (options.onProgress && snapshot.totalBytes > 0) {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              options.onProgress(Math.round(progress));
+            if (snapshot.totalBytes > 0) {
+              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+              const transferredMb = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(1);
+              const totalMb = (snapshot.totalBytes / (1024 * 1024)).toFixed(1);
+              const status = `${transferredMb}MB / ${totalMb}MB (${progress}%)`;
+              options.onProgress?.(progress, status);
             }
           },
-          (error) => reject(error),
+          (error: any) => {
+            console.error('Firebase Storage upload error:', error);
+            if (error.code === 'storage/unauthorized') {
+              reject(
+                new Error(
+                  'Firebase Storage permission denied. Please enable public write access in Firebase Console > Storage > Rules (set: allow read, write: if true;) or use Video Link.'
+                )
+              );
+            } else if (error.code === 'storage/canceled') {
+              reject(new Error('Upload was canceled.'));
+            } else {
+              reject(new Error(error.message || 'Firebase storage upload failed.'));
+            }
+          },
           async () => {
             try {
+              options.onProgress?.(100, 'Finalizing download URL...');
               const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
               resolve(downloadUrl);
-            } catch (urlErr) {
+            } catch (urlErr: any) {
               reject(urlErr);
             }
           }
         );
       });
+    } catch (firebaseErr: any) {
+      console.warn('Direct Firebase Storage upload error:', firebaseErr);
+      
+      // If small enough, try server endpoint fallback
+      if (file.size <= 4.5 * 1024 * 1024) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.url) return json.url;
+          }
+        } catch {}
+      }
 
-      // Strict 6 second timeout to prevent hanging UI
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => {
-          uploadTask.cancel();
-          reject(new Error('Firebase Storage timeout.'));
-        }, 6000)
-      );
-
-      return await Promise.race([uploadPromise, timeoutPromise]);
+      throw firebaseErr;
     }
-  } catch (firebaseErr: any) {
-    console.warn('Firebase Storage upload failed/timed out:', firebaseErr?.message || firebaseErr);
   }
 
-  // If large video upload could not be stored in Cloud Storage, provide clear instruction
-  const fileSizeMb = (file.size / (1024 * 1024)).toFixed(1);
-  throw new Error(
-    `Video size is ${fileSizeMb}MB. Please compress your video below 4.5MB or switch to "Video Link" to paste a direct URL (from Cloudinary, Google Drive, Vimeo, or CDN).`
-  );
+  // --- PATH 3: SMALL LOCAL STREAM FALLBACK ---
+  return await convertFileToDataUrl(file);
 }
+
 

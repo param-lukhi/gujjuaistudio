@@ -21,6 +21,7 @@ export default function AdminHeroPage() {
   const [videoMode, setVideoMode] = useState<'upload' | 'url'>('url');
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -94,12 +95,16 @@ export default function AdminHeroPage() {
 
     setUploadingVideo(true);
     setUploadProgress(0);
+    setUploadStatus(`Preparing ${(file.size / (1024 * 1024)).toFixed(1)}MB video...`);
     setErrorMsg(null);
 
     try {
       const url = await uploadMediaFile(file, {
         folder: 'hero_reels',
-        onProgress: (p) => setUploadProgress(p),
+        onProgress: (p, status) => {
+          setUploadProgress(p);
+          if (status) setUploadStatus(status);
+        },
       });
 
       setFormData((prev) => ({ ...prev, videoUrl: url }));
@@ -110,9 +115,11 @@ export default function AdminHeroPage() {
     } finally {
       setUploadingVideo(false);
       setUploadProgress(0);
+      setUploadStatus('');
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
+
 
   // Save changes to database
   const handleSubmit = async (e: React.FormEvent) => {
@@ -375,12 +382,12 @@ export default function AdminHeroPage() {
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
                         <p className="text-xs font-bold text-white">
-                          Uploading video to Cloud Storage... {uploadProgress > 0 ? `(${uploadProgress}%)` : ''}
+                          {uploadStatus || `Uploading video to Cloud Storage... (${uploadProgress}%)`}
                         </p>
                         {uploadProgress > 0 && (
-                          <div className="w-48 bg-surface-200 h-1.5 rounded-full overflow-hidden mx-auto mt-2">
+                          <div className="w-56 bg-surface-200 h-2 rounded-full overflow-hidden mx-auto mt-2">
                             <div
-                              className="bg-brand-500 h-full rounded-full transition-all duration-300"
+                              className="bg-brand-500 h-full rounded-full transition-all duration-300 shadow-sm shadow-brand-400"
                               style={{ width: `${uploadProgress}%` }}
                             />
                           </div>
@@ -389,11 +396,12 @@ export default function AdminHeroPage() {
                     ) : (
                       <>
                         <Upload className="w-8 h-8 text-brand-400 mx-auto" />
-                        <p className="text-xs font-bold text-white">Click to Select & Upload Video File</p>
-                        <p className="text-[11px] text-gray-400">Supports MP4, MOV, WEBM (Vertical 9:16 Recommended)</p>
+                        <p className="text-xs font-bold text-white">Click to Select & Upload Video File (Up to 500MB)</p>
+                        <p className="text-[11px] text-gray-400">Direct Cloud Upload: MP4, MOV, WEBM (Vertical 9:16 HD)</p>
                       </>
                     )}
                   </div>
+
 
                   {formData.videoUrl && (
                     <p className="text-[11px] text-emerald-400 font-mono truncate">

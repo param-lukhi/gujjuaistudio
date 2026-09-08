@@ -44,6 +44,8 @@ export default function ManagePortfolioPage() {
   const [thumbMode, setThumbMode] = useState<'upload' | 'link'>('upload');
 
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoUploadStatus, setVideoUploadStatus] = useState('');
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -129,6 +131,8 @@ export default function ManagePortfolioPage() {
 
     if (type === 'video') {
       setUploadingVideo(true);
+      setVideoUploadProgress(0);
+      setVideoUploadStatus(`Preparing ${(file.size / (1024 * 1024)).toFixed(1)}MB video...`);
     } else {
       setUploadingThumb(true);
     }
@@ -137,6 +141,12 @@ export default function ManagePortfolioPage() {
     try {
       const url = await uploadMediaFile(file, {
         folder: type === 'video' ? 'portfolio_videos' : 'portfolio_thumbnails',
+        onProgress: (p, status) => {
+          if (type === 'video') {
+            setVideoUploadProgress(p);
+            if (status) setVideoUploadStatus(status);
+          }
+        },
       });
 
       if (type === 'video') {
@@ -148,10 +158,15 @@ export default function ManagePortfolioPage() {
       console.error('File upload error:', err);
       setUploadError(err.message || 'File upload failed. Please try again.');
     } finally {
-      if (type === 'video') setUploadingVideo(false);
+      if (type === 'video') {
+        setUploadingVideo(false);
+        setVideoUploadProgress(0);
+        setVideoUploadStatus('');
+      }
       if (type === 'thumbnail') setUploadingThumb(false);
     }
   };
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -476,8 +491,17 @@ export default function ManagePortfolioPage() {
                         {uploadingVideo ? (
                           <div className="flex flex-col items-center justify-center py-3 space-y-2">
                             <Loader2 className="w-7 h-7 text-brand-400 animate-spin" />
-                            <p className="text-xs font-semibold text-brand-300">Uploading video file...</p>
-                            <p className="text-[10px] text-gray-400">Processing file format and saving securely</p>
+                            <p className="text-xs font-bold text-white">
+                              {videoUploadStatus || `Uploading video file... (${videoUploadProgress}%)`}
+                            </p>
+                            {videoUploadProgress > 0 && (
+                              <div className="w-56 bg-surface-200 h-2 rounded-full overflow-hidden mx-auto mt-2">
+                                <div
+                                  className="bg-brand-500 h-full rounded-full transition-all duration-300 shadow-sm shadow-brand-400"
+                                  style={{ width: `${videoUploadProgress}%` }}
+                                />
+                              </div>
+                            )}
                           </div>
                         ) : formData.videoUrl ? (
                           <div className="flex items-center justify-between gap-2 text-left">
@@ -515,11 +539,12 @@ export default function ManagePortfolioPage() {
                               <Upload className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-white">Click or drag & drop video file here</p>
-                              <p className="text-[11px] text-gray-400 mt-0.5">All formats supported: MP4, MOV, MKV, WEBM, AVI, M4V, 3GP, WMV, etc.</p>
+                              <p className="text-xs font-bold text-white">Click or drag & drop video file here (Up to 500MB)</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">Supports 4K Reels: MP4, MOV, MKV, WEBM, AVI, M4V, 3GP, WMV, etc.</p>
                             </div>
                           </div>
                         )}
+
                       </div>
 
                       {/* Video Supported Formats Badges */}
