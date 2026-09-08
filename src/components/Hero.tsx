@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { 
   Sparkles, Play, ArrowRight, ShieldCheck, Zap, Award, Star, 
-  Check, Headphones, Film, Video, Eye, ThumbsUp, Flame 
+  Check, Headphones, Film, Video, Eye, ThumbsUp, Flame,
+  Volume2, VolumeX
 } from 'lucide-react';
 import { useAuthModal } from './providers/AuthModalContext';
 
@@ -185,6 +186,8 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
   const { data: session } = useSession();
   const { requireAuth } = useAuthModal();
   const [heroData, setHeroData] = useState<HeroShowcaseData>(initialData || DEFAULT_HERO);
+  const [isMuted, setIsMuted] = useState(true);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     // Fetch live hero showcase data
@@ -338,14 +341,23 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black">
                 {heroData.videoUrl && (
                   <video
+                    ref={heroVideoRef}
                     id="hero-reel-video"
                     key={heroData.videoUrl}
                     src={heroData.videoUrl}
                     autoPlay
                     loop
-                    muted
+                    muted={isMuted}
                     playsInline
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"
+                    onClick={() => {
+                      const next = !isMuted;
+                      setIsMuted(next);
+                      if (heroVideoRef.current) {
+                        heroVideoRef.current.muted = next;
+                        if (!next) heroVideoRef.current.play().catch(() => {});
+                      }
+                    }}
                   />
                 )}
 
@@ -362,16 +374,27 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const vid = document.getElementById('hero-reel-video') as HTMLVideoElement;
-                          if (vid) {
-                            vid.muted = !vid.muted;
-                            const btn = document.getElementById('sound-btn-text');
-                            if (btn) btn.innerText = vid.muted ? '🔇 Muted' : '🔊 Sound On';
+                          const next = !isMuted;
+                          setIsMuted(next);
+                          if (heroVideoRef.current) {
+                            heroVideoRef.current.muted = next;
+                            if (!next) heroVideoRef.current.play().catch(() => {});
                           }
                         }}
-                        className="px-2 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold border border-white/20 transition-all flex items-center gap-1 cursor-pointer shadow-lg"
+                        className="px-2.5 py-1 rounded-md bg-black/70 hover:bg-black/90 text-white text-[10px] font-bold border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-lg backdrop-blur-md"
+                        title={isMuted ? 'Click to play sound' : 'Click to mute'}
                       >
-                        <span id="sound-btn-text">🔇 Muted</span>
+                        {isMuted ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 text-gray-300" />
+                            <span>Muted</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                            <span className="text-emerald-300">Sound On</span>
+                          </>
+                        )}
                       </button>
 
                       <span className="text-[11px] sm:text-xs font-mono text-gray-300 bg-black/60 px-2 sm:px-2.5 py-1 rounded-md border border-white/10">
