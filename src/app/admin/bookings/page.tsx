@@ -316,7 +316,7 @@ export default function ManageBookingsPage() {
                     <th className="p-3.5">Ref ID</th>
                     <th className="p-3.5">Client & Business</th>
                     <th className="p-3.5">Service & Price</th>
-                    <th className="p-3.5">Scheduled Slot</th>
+                    <th className="p-3.5">Delivery & Platform</th>
                     <th className="p-3.5">Status & Action</th>
                     <th className="p-3.5 text-right">Admin Controls</th>
                   </tr>
@@ -363,12 +363,12 @@ export default function ManageBookingsPage() {
 
                       <td className="p-3.5 space-y-1 min-w-[140px]">
                         <div className="flex items-center gap-1 text-white font-bold">
-                          <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                          {b.bookingDate || 'Scheduled Soon'}
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          {b.deliveryRequirement || 'Standard Delivery'}
                         </div>
                         <div className="flex items-center gap-1 text-[10px] text-accent-cyan font-semibold">
-                          <Clock className="w-3 h-3" />
-                          {b.bookingTime || 'Flexible'}
+                          <Video className="w-3 h-3" />
+                          {b.deliveryPlatform || 'WhatsApp'}
                         </div>
                       </td>
 
@@ -741,7 +741,10 @@ export default function ManageBookingsPage() {
                   <strong>Business:</strong> {detailsModalBooking.businessName || '—'}
                 </p>
                 <p className="text-gray-300">
-                  <strong>Date & Slot:</strong> {detailsModalBooking.bookingDate} ({detailsModalBooking.bookingTime})
+                  <strong>Order Date:</strong> {new Date(detailsModalBooking.createdAt).toLocaleString()}
+                </p>
+                <p className="text-gray-300">
+                  <strong>Estimated Delivery:</strong> <span className="text-amber-400 font-bold">{detailsModalBooking.deliveryRequirement || '2–3 Working Days'}</span>
                 </p>
 
                 {detailsModalBooking.websiteUrl && (

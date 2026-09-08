@@ -174,12 +174,12 @@ export default function DashboardPage() {
                 </h3>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300">
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                    <strong>Date:</strong> {upcomingBooking.bookingDate || 'Scheduled Soon'}
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <strong>Delivery:</strong> {upcomingBooking.deliveryRequirement || '2–3 Working Days'}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-accent-cyan" />
-                    <strong>Time:</strong> {upcomingBooking.bookingTime || 'Flexible'}
+                    <Video className="w-3.5 h-3.5 text-accent-cyan" />
+                    <strong>Platform:</strong> {upcomingBooking.deliveryPlatform || 'WhatsApp'}
                   </span>
                   <span>
                     <strong>Price:</strong> {formatCurrencyINR(upcomingBooking.price)}

@@ -298,18 +298,18 @@ export default function MyBookingsPage() {
                   {/* Booking Details Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-surface-100/40 p-3.5 rounded-2xl border border-surface-200/40">
                     <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-bold">Booking Date</span>
+                      <span className="text-gray-400 block text-[10px] uppercase font-bold">Estimated Delivery</span>
                       <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
-                        <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                        {booking.bookingDate || 'Scheduled Soon'}
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        {booking.deliveryRequirement || '2–3 Working Days'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-bold">Time Slot</span>
+                      <span className="text-gray-400 block text-[10px] uppercase font-bold">Delivery Platform</span>
                       <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
-                        <Clock className="w-3.5 h-3.5 text-accent-cyan" />
-                        {booking.bookingTime || 'Flexible'}
+                        <Video className="w-3.5 h-3.5 text-accent-cyan" />
+                        {booking.deliveryPlatform || 'WhatsApp'}
                       </span>
                     </div>
 
@@ -436,12 +436,16 @@ export default function MyBookingsPage() {
                 </div>
               )}
               <div className="flex justify-between py-1 border-b border-surface-200/30">
-                <span className="text-gray-400">Scheduled Date:</span>
-                <span className="font-bold text-white">{selectedBooking.bookingDate || 'Not specified'}</span>
+                <span className="text-gray-400">Order Placed:</span>
+                <span className="font-bold text-white">{new Date(selectedBooking.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-surface-200/30">
-                <span className="text-gray-400">Time Slot:</span>
-                <span className="font-bold text-white">{selectedBooking.bookingTime || 'Not specified'}</span>
+                <span className="text-gray-400">Estimated Delivery:</span>
+                <span className="font-bold text-amber-300">{selectedBooking.deliveryRequirement || '2–3 Working Days'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-surface-200/30">
+                <span className="text-gray-400">Delivery Platform:</span>
+                <span className="font-bold text-white">{selectedBooking.deliveryPlatform || 'WhatsApp'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-surface-200/30">
                 <span className="text-gray-400">Price:</span>

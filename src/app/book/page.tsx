@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Calendar,
   Clock,
   Image as ImageIcon,
   Link as LinkIcon,
@@ -55,6 +54,7 @@ interface StandardPackage {
   badge: string;
   price: number;
   duration: string;
+  deliveryDays: string;
   desc: string;
   features: string[];
 }
@@ -65,6 +65,7 @@ const STANDARD_PACKAGES: Record<string, StandardPackage> = {
     badge: '🥉 Starter',
     price: 600,
     duration: 'Up to 15 Seconds',
+    deliveryDays: 'Delivery in 2 Days',
     desc: 'Perfect for quick Instagram Reels & TikTok hooks with AI-generated visuals.',
     features: [
       '1 AI Product Reel',
@@ -80,6 +81,7 @@ const STANDARD_PACKAGES: Record<string, StandardPackage> = {
     badge: '🥈 Most Popular',
     price: 1200,
     duration: 'Up to 30 Seconds Each',
+    deliveryDays: 'Delivery in 2 Days',
     desc: 'Cinematic AI model showcase with multiple scene transitions and high conversion script.',
     features: [
       '1 AI Product Reel',
@@ -96,6 +98,7 @@ const STANDARD_PACKAGES: Record<string, StandardPackage> = {
     badge: '🥇 Premium Quality',
     price: 2300,
     duration: 'Up to 60 Seconds Each',
+    deliveryDays: 'Delivery in 2 Days',
     desc: 'Full-length 4K commercial-grade AI ad with lifelike avatars, VFX, and multi-format exports.',
     features: [
       '1 AI Product Reel',
@@ -109,13 +112,6 @@ const STANDARD_PACKAGES: Record<string, StandardPackage> = {
     ],
   },
 };
-
-const TIME_SLOTS = [
-  { id: 'morning', label: '10:00 AM - 12:00 PM', period: 'Morning Slot' },
-  { id: 'afternoon', label: '01:00 PM - 03:00 PM', period: 'Afternoon Slot' },
-  { id: 'evening', label: '04:00 PM - 06:00 PM', period: 'Evening Slot' },
-  { id: 'night', label: '07:00 PM - 09:00 PM', period: 'Night Slot' },
-];
 
 const TARGET_PLATFORMS_LIST = [
   { id: 'Instagram Reels', label: 'Instagram Reels' },
@@ -229,7 +225,7 @@ function BookingWizard() {
     return baseReelsPrice + totalDurationAdder + revisionAdder + urgentAdder;
   }, [customConfig, customPricingRules]);
 
-  // If user arrived with a valid package param from pricing page (and not 'custom'), jump directly to Step 2
+  // If user arrived with a valid standard package param from pricing page, jump directly to Step 2 (Project Details)
   const [currentStep, setCurrentStep] = useState(
     pkgParam && STANDARD_PACKAGES[pkgParam] ? 2 : 1
   );
@@ -248,15 +244,7 @@ function BookingWizard() {
     }
   }, [pkgParam]);
 
-  // Step 2: Date & Time
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  });
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(TIME_SLOTS[0].label);
-
-  // Step 3: Client & Project Details
+  // Step 2: Client & Project Details
   const [formData, setFormData] = useState({
     name: '',
     businessName: '',
@@ -279,7 +267,7 @@ function BookingWizard() {
   const [uploading, setUploading] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
-  // Step 5: Payment state
+  // Step 4: Payment state
   const [upiTransactionId, setUpiTransactionId] = useState('');
   const [paymentProofUrl, setPaymentProofUrl] = useState('');
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -312,6 +300,7 @@ function BookingWizard() {
         badge: '✨ Custom Tailored',
         price: customCalculatedPrice,
         duration: `Up to ${customConfig.duration} Seconds Each`,
+        deliveryDays: deliveryText,
         desc: `Custom configuration of ${customConfig.reelCount} reel(s), ${customConfig.duration}s duration, with ${revisionText}.`,
         features: [
           `${customConfig.reelCount} AI Product Reel${customConfig.reelCount > 1 ? 's' : ''}`,
@@ -348,42 +337,39 @@ function BookingWizard() {
     setFormData((prev) => {
       const exists = prev.targetPlatforms.includes(platform);
       if (exists) {
+        if (prev.targetPlatforms.length === 1) return prev;
         return { ...prev, targetPlatforms: prev.targetPlatforms.filter((p) => p !== platform) };
-      } else {
-        return { ...prev, targetPlatforms: [...prev.targetPlatforms, platform] };
       }
+      return { ...prev, targetPlatforms: [...prev.targetPlatforms, platform] };
     });
   };
 
-  // Upload Project Assets
+  // Upload Images
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const newUrls = [...uploadedImages];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
+    try {
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const url = await uploadMediaFile(file, { folder: 'booking_assets' });
-        if (url) {
-          newUrls.push(url);
-        }
-      } catch (err) {
-        console.error('Error uploading file:', err);
+        if (url) urls.push(url);
       }
+      setUploadedImages((prev) => [...prev, ...urls]);
+    } catch (err) {
+      console.error('Error uploading product assets:', err);
+    } finally {
+      setUploading(false);
     }
-
-    setUploadedImages(newUrls);
-    setUploading(false);
   };
 
   const handleRemoveImage = (index: number) => {
-    setUploadedImages(uploadedImages.filter((_, i) => i !== index));
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Upload Payment Screenshot
+  // Upload Payment Proof
   const handlePaymentProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -401,24 +387,17 @@ function BookingWizard() {
     }
   };
 
-
   // Final Submission to API
   const handleFinalSubmitWithPayment = async (isPaidViaUpi: boolean = true) => {
     if (!formData.name || !formData.email || !formData.phone || !formData.productDescription) {
       setError('Please fill in all required client and project fields.');
-      setCurrentStep(3);
-      return;
-    }
-
-    if (!selectedDate || !selectedTimeSlot) {
-      setError('Please select a booking date and time slot.');
       setCurrentStep(2);
       return;
     }
 
     if (formData.targetPlatforms.length === 0) {
       setError('Please select at least one Target Platform where you plan to post/use the video.');
-      setCurrentStep(3);
+      setCurrentStep(2);
       return;
     }
 
@@ -452,11 +431,11 @@ function BookingWizard() {
           videoStyleCustom: formData.videoStyle === 'Other / Custom' ? formData.videoStyleCustom : null,
           refLink: formData.referenceLink || null,
           imageUrls: uploadedImages,
-          deliveryRequirement: activePackage.customOptions?.urgentDelivery ? 'Urgent (24 Hours)' : formData.deliveryRequirement,
+          deliveryRequirement: activePackage.customOptions?.urgentDelivery ? 'Urgent (24 Hours)' : (activePackage.deliveryDays || formData.deliveryRequirement),
           additionalInstructions: formData.additionalInstructions || null,
           customOptions: activePackage.customOptions ? JSON.stringify(activePackage.customOptions) : null,
-          bookingDate: selectedDate,
-          bookingTime: selectedTimeSlot,
+          bookingDate: new Date().toISOString().split('T')[0],
+          bookingTime: 'Flexible',
           paymentStatus: isPaidViaUpi ? 'PENDING_VERIFICATION' : 'UNPAID',
           paymentRef: upiTransactionId.trim() || (isPaidViaUpi ? 'PAID_VIA_UPI_APP' : null),
           paymentProof: paymentProofUrl || null,
@@ -470,7 +449,7 @@ function BookingWizard() {
         setError(data.error || 'Failed to submit booking.');
       } else {
         setCreatedBooking(data.booking);
-        setCurrentStep(6);
+        setCurrentStep(5);
       }
     } catch (err) {
       setError('Network connection error. Please try again.');
@@ -479,26 +458,23 @@ function BookingWizard() {
     }
   };
 
-  const minDate = new Date().toISOString().split('T')[0];
-
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Wizard Step Progress Tracker */}
-      {currentStep <= 5 && (
+      {/* Wizard Step Progress Tracker (4 Steps) */}
+      {currentStep <= 4 && (
         <div className="mb-8">
           <div className="flex items-center justify-between relative">
             <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-surface-200 -translate-y-1/2 z-0" />
             <div
               className="absolute top-1/2 left-0 h-0.5 bg-gradient-to-r from-brand-500 via-accent-cyan to-emerald-400 -translate-y-1/2 z-0 transition-all duration-300"
-              style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
+              style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
             />
 
             {[
               { num: 1, title: 'Package' },
-              { num: 2, title: 'Date & Slot' },
-              { num: 3, title: 'Project Details' },
-              { num: 4, title: 'Review' },
-              { num: 5, title: 'Payment' },
+              { num: 2, title: 'Project Details' },
+              { num: 3, title: 'Review' },
+              { num: 4, title: 'Payment' },
             ].map((step) => {
               const isCompleted = currentStep > step.num;
               const isCurrent = currentStep === step.num;
@@ -608,7 +584,7 @@ function BookingWizard() {
                           {formatCurrencyINR(pkg.price)}
                         </span>
                         <span className="text-[11px] text-gray-400 ml-1">/ reel</span>
-                        <p className="text-[10px] text-gray-500">{pkg.duration}</p>
+                        <p className="text-[10px] text-gray-500">{pkg.duration} • {pkg.deliveryDays}</p>
                       </div>
 
                       <ul className="space-y-1.5 border-t border-surface-200/40 pt-3">
@@ -786,7 +762,7 @@ function BookingWizard() {
               }}
               className="btn-glow px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/30"
             >
-              Continue to Date & Time
+              Continue to Project Details
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -794,12 +770,12 @@ function BookingWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 2: SELECT DATE & TIME SLOT                              */}
+      {/* STEP 2: CLIENT & PROJECT DETAILS                             */}
       {/* ============================================================ */}
       {currentStep === 2 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6 animate-in fade-in duration-200">
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-8 animate-in fade-in duration-200">
           
-          {/* Selected Package Banner */}
+          {/* Selected Package Summary Pill */}
           <div className="p-4 rounded-2xl bg-brand-950/60 border border-brand-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-brand-500/10">
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 rounded-xl bg-brand-500/20 text-brand-300 font-extrabold text-xs border border-brand-500/30">
@@ -807,7 +783,7 @@ function BookingWizard() {
               </span>
               <div>
                 <h3 className="font-bold text-white text-sm sm:text-base">{activePackage.name}</h3>
-                <p className="text-[11px] text-gray-400">{activePackage.duration} • {activePackage.customOptions?.urgentDelivery ? '24-Hour Express' : '2-Day Turnaround'}</p>
+                <p className="text-[11px] text-gray-400">{activePackage.duration} • {activePackage.customOptions?.urgentDelivery ? '24-Hour Express Delivery' : (activePackage.deliveryDays || 'Delivery in 2 Days')}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 self-end sm:self-center">
@@ -822,109 +798,15 @@ function BookingWizard() {
             </div>
           </div>
 
-          <div className="border-b border-surface-200/50 pb-4">
-            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-brand-400" />
-              2. Select Booking Date & Time Slot
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-1">
-              Pick your preferred project initiation date and creative onboarding slot.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Date Picker */}
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Select Booking Date <span className="text-brand-400">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  min={minDate}
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl bg-surface-100 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all cursor-pointer"
-                />
-              </div>
-              <p className="text-[11px] text-gray-400">
-                Selected: <strong className="text-brand-300">{new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
-              </p>
-            </div>
-
-            {/* Time Slot Picker */}
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Select Available Time Slot <span className="text-brand-400">*</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {TIME_SLOTS.map((slot) => {
-                  const isSelected = selectedTimeSlot === slot.label;
-                  return (
-                    <button
-                      type="button"
-                      key={slot.id}
-                      onClick={() => setSelectedTimeSlot(slot.label)}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? 'bg-brand-600/30 border-brand-400 text-white ring-2 ring-brand-500/30'
-                          : 'bg-surface-100/60 border-surface-200/60 text-gray-300 hover:bg-surface-100 hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold">{slot.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-brand-400" />}
-                      </div>
-                      <span className="text-[10px] text-gray-400">{slot.period}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-surface-200/50">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-surface-100 border border-surface-200 flex items-center gap-1.5"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Package
-            </button>
-
-            <button
-              onClick={() => {
-                if (!selectedDate || !selectedTimeSlot) {
-                  setError('Please choose a date and time slot.');
-                  return;
-                }
-                setError('');
-                setCurrentStep(3);
-              }}
-              className="btn-glow px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/30"
-            >
-              Continue to Project Details
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* STEP 3: CLIENT & PROJECT DETAILS                             */}
-      {/* ============================================================ */}
-      {currentStep === 3 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-8 animate-in fade-in duration-200">
-          
           {/* Section 1: Client Information */}
           <div className="space-y-4">
             <div className="border-b border-surface-200/50 pb-3">
               <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-brand-400" />
-                Client & Contact Information
+                2. Client & Contact Information
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                We will use this information for order updates, script review, and support.
+                We will use this information for order updates, script review, and video delivery.
               </p>
             </div>
 
@@ -1177,7 +1059,7 @@ function BookingWizard() {
               )}
             </div>
 
-            {/* Reference Links & Upload Assets */}
+            {/* Reference Links & Delivery Requirement */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
@@ -1199,15 +1081,12 @@ function BookingWizard() {
                 <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
                   Delivery Requirement Timeframe
                 </label>
-                <select
-                  value={formData.deliveryRequirement}
-                  onChange={(e) => setFormData({ ...formData, deliveryRequirement: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs sm:text-sm focus:outline-none focus:border-brand-500"
-                >
-                  <option value="Standard (48-72 Hours)">Standard Delivery (48 - 72 Hours)</option>
-                  <option value="Urgent (24 Hours)">Urgent Delivery (Within 24 Hours)</option>
-                  <option value="Flexible (Within 1 Week)">Flexible Timeline (Within 1 Week)</option>
-                </select>
+                <div className="p-3 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs sm:text-sm font-semibold flex items-center justify-between">
+                  <span>{activePackage.customOptions?.urgentDelivery ? '⚡ Urgent 24-Hour Express Delivery' : (activePackage.deliveryDays || 'Standard 48-72 Hours Delivery')}</span>
+                  <span className="text-[10px] text-brand-300 font-bold bg-brand-500/20 px-2 py-0.5 rounded border border-brand-500/30">
+                    Included in {activePackage.badge}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1274,11 +1153,11 @@ function BookingWizard() {
 
           <div className="flex items-center justify-between pt-4 border-t border-surface-200/50">
             <button
-              onClick={() => setCurrentStep(2)}
+              onClick={() => setCurrentStep(1)}
               className="px-5 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-surface-100 border border-surface-200 flex items-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Date & Slot
+              Back to Package
             </button>
 
             <button
@@ -1292,7 +1171,7 @@ function BookingWizard() {
                   return;
                 }
                 setError('');
-                setCurrentStep(4);
+                setCurrentStep(3);
               }}
               className="btn-glow px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/30"
             >
@@ -1304,14 +1183,14 @@ function BookingWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 4: REVIEW BOOKING DETAILS                               */}
+      {/* STEP 3: REVIEW BOOKING DETAILS                               */}
       {/* ============================================================ */}
-      {currentStep === 4 && (
+      {currentStep === 3 && (
         <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6 animate-in fade-in duration-200">
           <div className="border-b border-surface-200/50 pb-4">
             <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              4. Review & Confirm Booking Specifications
+              3. Review & Confirm Booking Specifications
             </h2>
             <p className="text-xs sm:text-sm text-gray-400 mt-1">
               Please review your project details and pricing before proceeding to the secure UPI payment gateway.
@@ -1325,7 +1204,7 @@ function BookingWizard() {
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
                   <PackageIcon className="w-4 h-4" />
-                  Selected Package & Schedule
+                  PACKAGE & DELIVERABLES
                 </h3>
                 <span className="px-2 py-0.5 rounded-lg bg-brand-500/20 text-brand-300 text-[10px] font-extrabold border border-brand-500/30">
                   {activePackage.badge}
@@ -1334,7 +1213,7 @@ function BookingWizard() {
 
               <div className="space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Package:</span>
+                  <span className="text-gray-400">Selected Package:</span>
                   <span className="font-bold text-white text-right">{activePackage.name}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1342,17 +1221,15 @@ function BookingWizard() {
                   <span className="font-bold text-white">{activePackage.duration}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Booking Date:</span>
-                  <span className="font-bold text-brand-300">{selectedDate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Time Slot:</span>
-                  <span className="font-bold text-white">{selectedTimeSlot}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Delivery Speed:</span>
+                  <span className="text-gray-400">Estimated Delivery:</span>
                   <span className="font-bold text-amber-300">
-                    {activePackage.customOptions?.urgentDelivery ? 'Urgent 24-Hour Express' : formData.deliveryRequirement}
+                    {activePackage.customOptions?.urgentDelivery ? 'Urgent 24-Hour Express' : (activePackage.deliveryDays || '2-3 Working Days')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Delivery Platform:</span>
+                  <span className="font-bold text-white">
+                    {formData.deliveryPlatform === 'Other' ? (formData.deliveryPlatformOther || 'Custom Platform') : formData.deliveryPlatform}
                   </span>
                 </div>
 
@@ -1367,15 +1244,15 @@ function BookingWizard() {
             <div className="space-y-4 p-5 rounded-2xl bg-surface-100/60 border border-surface-200/60">
               <h3 className="text-xs font-bold uppercase tracking-wider text-accent-cyan flex items-center gap-1.5">
                 <User className="w-4 h-4" />
-                Client Contact Details
+                PROJECT & CLIENT DETAILS
               </h3>
               <div className="space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Name:</span>
+                  <span className="text-gray-400">Client Name:</span>
                   <span className="font-bold text-white">{formData.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Brand:</span>
+                  <span className="text-gray-400">Brand / Business:</span>
                   <span className="font-bold text-white">{formData.businessName || '—'}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1383,7 +1260,7 @@ function BookingWizard() {
                   <span className="font-bold text-white truncate max-w-[180px]">{formData.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Phone:</span>
+                  <span className="text-gray-400">Phone / WhatsApp:</span>
                   <span className="font-bold text-white">{formData.phone}</span>
                 </div>
                 {formData.websiteUrl && (
@@ -1399,7 +1276,7 @@ function BookingWizard() {
             <div className="md:col-span-2 space-y-3 p-5 rounded-2xl bg-surface-100/40 border border-surface-200/60 text-xs">
               <h3 className="font-bold uppercase tracking-wider text-white text-[11px] flex items-center gap-1.5">
                 <Video className="w-4 h-4 text-brand-400" />
-                Project Specifications Breakdown
+                PROJECT SPECIFICATIONS & TARGET PLATFORMS
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
@@ -1415,7 +1292,7 @@ function BookingWizard() {
                 </div>
 
                 <div>
-                  <span className="text-gray-400 block font-semibold">Delivery Platform (Studio to Client):</span>
+                  <span className="text-gray-400 block font-semibold">AI Reel Delivery Platform:</span>
                   <span className="font-bold text-white mt-1 block">
                     {formData.deliveryPlatform === 'Other' ? `Other (${formData.deliveryPlatformOther || 'Custom'})` : formData.deliveryPlatform}
                   </span>
@@ -1432,7 +1309,7 @@ function BookingWizard() {
               <div className="border-t border-surface-200/40 pt-2.5">
                 <span className="text-gray-400 block font-semibold">Project Requirements / Brief:</span>
                 <p className="text-gray-200 mt-1 italic bg-[#080B11] p-3 rounded-xl border border-surface-200/50 leading-relaxed">
-                  "{formData.productDescription}"
+                  &quot;{formData.productDescription}&quot;
                 </p>
               </div>
 
@@ -1467,7 +1344,7 @@ function BookingWizard() {
 
           <div className="flex items-center justify-between pt-4 border-t border-surface-200/50">
             <button
-              onClick={() => setCurrentStep(3)}
+              onClick={() => setCurrentStep(2)}
               className="px-5 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-surface-100 border border-surface-200 flex items-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -1482,11 +1359,11 @@ function BookingWizard() {
                   return;
                 }
                 setError('');
-                setCurrentStep(5);
+                setCurrentStep(4);
               }}
               className="btn-glow px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Proceed to Payment
+              Confirm &amp; Pay
               <CreditCard className="w-4 h-4" />
             </button>
           </div>
@@ -1494,9 +1371,9 @@ function BookingWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 5: DYNAMIC UPI QR & PAYMENT GATEWAY                     */}
+      {/* STEP 4: DYNAMIC UPI QR & PAYMENT GATEWAY                     */}
       {/* ============================================================ */}
-      {currentStep === 5 && (
+      {currentStep === 4 && (
         <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-surface-200/80 shadow-2xl space-y-6 animate-in fade-in duration-200">
           
           {/* Header */}
@@ -1508,7 +1385,7 @@ function BookingWizard() {
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
                 <QrCode className="w-6 h-6 text-brand-400" />
-                5. Scan & Pay via UPI
+                4. Scan &amp; Pay via UPI
               </h2>
             </div>
 
@@ -1596,7 +1473,7 @@ function BookingWizard() {
                   <li>Scan the dynamic QR code with Google Pay, PhonePe, or Paytm.</li>
                   <li>Complete the payment of <strong className="text-emerald-400">{formatCurrencyINR(activePackage.price)}</strong>.</li>
                   <li>Copy the <strong>12-digit UPI Reference Number / UTR</strong> from your payment receipt.</li>
-                  <li>Enter the UTR below and click <strong>"Verify & Complete Booking"</strong>.</li>
+                  <li>Enter the UTR below and click <strong>&quot;Submit Payment &amp; Confirm Booking&quot;</strong>.</li>
                 </ol>
               </div>
 
@@ -1670,12 +1547,12 @@ function BookingWizard() {
                     {submitting ? (
                       <span className="inline-flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Verifying Payment & Booking...
+                        Verifying Payment &amp; Booking...
                       </span>
                     ) : (
                       <>
                         <ShieldCheck className="w-5 h-5 text-emerald-300" />
-                        Submit Payment & Confirm Booking
+                        Submit Payment &amp; Confirm Booking
                       </>
                     )}
                   </button>
@@ -1683,7 +1560,7 @@ function BookingWizard() {
                   <div className="flex items-center justify-between text-xs pt-1">
                     <button
                       type="button"
-                      onClick={() => setCurrentStep(4)}
+                      onClick={() => setCurrentStep(3)}
                       className="text-gray-400 hover:text-white flex items-center gap-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Back to Review
@@ -1710,9 +1587,9 @@ function BookingWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 6: BOOKING SUCCESS SCREEN                               */}
+      {/* STEP 5: BOOKING SUCCESS SCREEN                               */}
       {/* ============================================================ */}
-      {currentStep === 6 && (
+      {currentStep === 5 && (
         <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-surface-200/80 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
           <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/20">
             <CheckCircle2 className="w-10 h-10 animate-bounce" />
@@ -1720,7 +1597,7 @@ function BookingWizard() {
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
-              Booking & Payment Received
+              Booking &amp; Payment Received
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white">
               Thank You! Your AI Reel is Booked.
@@ -1741,8 +1618,10 @@ function BookingWizard() {
               <span className="font-bold text-white">{activePackage.name} ({formatCurrencyINR(activePackage.price)})</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Scheduled Date & Slot:</span>
-              <span className="font-bold text-white">{selectedDate} • {selectedTimeSlot}</span>
+              <span className="text-gray-400">Estimated Delivery:</span>
+              <span className="font-bold text-amber-300">
+                {activePackage.customOptions?.urgentDelivery ? 'Urgent 24-Hour Express' : (activePackage.deliveryDays || '2-3 Working Days')}
+              </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Delivery Platform:</span>
@@ -1810,7 +1689,7 @@ export default function BookPage() {
             Book Your <span className="text-gradient-blue">AI Video Reel</span>
           </h1>
           <p className="text-gray-400 text-xs sm:text-sm max-w-xl mx-auto">
-            Choose your standard or custom package, pick your schedule, and provide your project details to launch your viral campaign.
+            Choose your standard or custom package and provide your project details to launch your high-converting campaign.
           </p>
         </div>
 
