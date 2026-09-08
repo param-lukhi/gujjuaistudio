@@ -165,6 +165,30 @@ function BookingWizard() {
     pkgParam && STANDARD_PACKAGES[pkgParam] ? pkgParam : 'professional'
   );
 
+  // Dynamic Custom Pricing Rules fetched from Admin Settings
+  const [customPricingRules, setCustomPricingRules] = useState({
+    baseReelPrice: 1000,
+    additionalReelPrice: 600,
+    urgentDeliveryPrice: 100,
+    duration15Price: 0,
+    duration30Price: 200,
+    duration60Price: 500,
+    revision1Price: 0,
+    revision2Price: 300,
+    revisionUnlimitedPrice: 800,
+  });
+
+  useEffect(() => {
+    fetch('/api/packages/custom-config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.baseReelPrice === 'number') {
+          setCustomPricingRules(data);
+        }
+      })
+      .catch((err) => console.error('Error fetching custom pricing rules:', err));
+  }, []);
+
   // Custom Package Builder Configuration
   const [customConfig, setCustomConfig] = useState({
     reelCount: 1,
@@ -173,23 +197,37 @@ function BookingWizard() {
     urgentDelivery: false,
   });
 
-  // Calculate Custom Price
+  // Calculate Custom Price dynamically from Admin rates
   const customCalculatedPrice = useMemo(() => {
-    // Base 1st reel = 1000, additional = 600
-    const baseReelsPrice = 1000 + (customConfig.reelCount - 1) * 600;
-    
+    // 1st reel base price + additional reels
+    const baseReelsPrice =
+      customPricingRules.baseReelPrice +
+      (customConfig.reelCount - 1) * customPricingRules.additionalReelPrice;
+
     // Duration adder per reel
-    const durationAdderPerReel = customConfig.duration === 60 ? 500 : customConfig.duration === 30 ? 200 : 0;
+    const durationAdderPerReel =
+      customConfig.duration === 60
+        ? customPricingRules.duration60Price
+        : customConfig.duration === 30
+        ? customPricingRules.duration30Price
+        : 0;
     const totalDurationAdder = durationAdderPerReel * customConfig.reelCount;
 
     // Revision adder
-    const revisionAdder = customConfig.revisions === 99 ? 800 : customConfig.revisions === 2 ? 300 : 0;
+    const revisionAdder =
+      customConfig.revisions === 99
+        ? customPricingRules.revisionUnlimitedPrice
+        : customConfig.revisions === 2
+        ? customPricingRules.revision2Price
+        : 0;
 
-    // Urgent delivery
-    const urgentAdder = customConfig.urgentDelivery ? 500 : 0;
+    // Early / Express delivery surcharge
+    const urgentAdder = customConfig.urgentDelivery
+      ? customPricingRules.urgentDeliveryPrice
+      : 0;
 
     return baseReelsPrice + totalDurationAdder + revisionAdder + urgentAdder;
-  }, [customConfig]);
+  }, [customConfig, customPricingRules]);
 
   // If user arrived with a valid package param from pricing page (and not 'custom'), jump directly to Step 2
   const [currentStep, setCurrentStep] = useState(
@@ -628,8 +666,8 @@ function BookingWizard() {
                     className="w-full accent-brand-500 cursor-pointer h-2 bg-surface-200 rounded-lg"
                   />
                   <div className="flex justify-between text-[10px] text-gray-400 font-medium">
-                    <span>1 Reel (Base ₹1,000)</span>
-                    <span>15 Reels (Bulk)</span>
+                    <span>1 Reel (Base {formatCurrencyINR(customPricingRules.baseReelPrice)})</span>
+                    <span>15 Reels (+{formatCurrencyINR(customPricingRules.additionalReelPrice)}/addl)</span>
                   </div>
                 </div>
 
@@ -641,8 +679,8 @@ function BookingWizard() {
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { sec: 15, label: '15 Sec', tag: 'Standard' },
-                      { sec: 30, label: '30 Sec', tag: '+₹200/reel' },
-                      { sec: 60, label: '60 Sec', tag: '+₹500/reel' },
+                      { sec: 30, label: '30 Sec', tag: `+${formatCurrencyINR(customPricingRules.duration30Price)}/reel` },
+                      { sec: 60, label: '60 Sec', tag: `+${formatCurrencyINR(customPricingRules.duration60Price)}/reel` },
                     ].map((item) => (
                       <button
                         type="button"
@@ -669,8 +707,8 @@ function BookingWizard() {
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { val: 1, label: '1 Revision', tag: 'Included' },
-                      { val: 2, label: '2 Revisions', tag: '+₹300' },
-                      { val: 99, label: 'Unlimited', tag: '+₹800' },
+                      { val: 2, label: '2 Revisions', tag: `+${formatCurrencyINR(customPricingRules.revision2Price)}` },
+                      { val: 99, label: 'Unlimited', tag: `+${formatCurrencyINR(customPricingRules.revisionUnlimitedPrice)}` },
                     ].map((item) => (
                       <button
                         type="button"
@@ -706,7 +744,9 @@ function BookingWizard() {
                       <span className="text-xs font-bold text-white">24-Hour Express Delivery</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-amber-400 font-bold">+₹500</span>
+                      <span className="text-[11px] text-amber-400 font-bold">
+                        +{formatCurrencyINR(customPricingRules.urgentDeliveryPrice)}
+                      </span>
                       <input
                         type="checkbox"
                         checked={customConfig.urgentDelivery}

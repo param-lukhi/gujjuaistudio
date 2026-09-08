@@ -4,6 +4,9 @@ import { prisma } from '@/lib/db';
 export async function GET() {
   try {
     const packages = await prisma.package.findMany({
+      where: {
+        slug: { not: 'custom-package-pricing-config' },
+      },
       orderBy: { price: 'asc' },
     });
     return NextResponse.json(packages);

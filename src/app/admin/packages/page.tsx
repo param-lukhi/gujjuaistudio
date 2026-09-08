@@ -6,7 +6,7 @@ import { formatCurrencyINR } from '@/lib/utils';
 import { 
   Package, Plus, Edit, Trash2, Check, Sparkles, X, 
   Loader2, AlertCircle, CheckCircle2, Star, ShieldCheck, 
-  ArrowUpRight, ListPlus, MinusCircle
+  ArrowUpRight, ListPlus, MinusCircle, Zap, Sliders, Clock, RotateCcw
 } from 'lucide-react';
 
 export default function ManagePackagesPage() {
@@ -18,7 +18,23 @@ export default function ManagePackagesPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Form State
+  // Custom Package Pricing Config State
+  const [customPricing, setCustomPricing] = useState({
+    baseReelPrice: 1000,
+    additionalReelPrice: 600,
+    urgentDeliveryPrice: 100, // Early / Express delivery charge
+    duration15Price: 0,
+    duration30Price: 200,
+    duration60Price: 500,
+    revision1Price: 0,
+    revision2Price: 300,
+    revisionUnlimitedPrice: 800,
+  });
+  const [savingCustom, setSavingCustom] = useState(false);
+  const [customSuccessMsg, setCustomSuccessMsg] = useState<string | null>(null);
+  const [customErrorMsg, setCustomErrorMsg] = useState<string | null>(null);
+
+  // Form State for Standard Package
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -45,9 +61,42 @@ export default function ManagePackagesPage() {
     }
   };
 
+  const fetchCustomPricing = async () => {
+    try {
+      const res = await fetch('/api/packages/custom-config');
+      const data = await res.json();
+      if (data && typeof data.baseReelPrice === 'number') {
+        setCustomPricing(data);
+      }
+    } catch (e) {
+      console.error('Error loading custom pricing:', e);
+    }
+  };
+
   useEffect(() => {
     fetchPackages();
+    fetchCustomPricing();
   }, []);
+
+  const handleSaveCustomPricing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingCustom(true);
+    setCustomErrorMsg(null);
+    try {
+      const res = await fetch('/api/packages/custom-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customPricing),
+      });
+      if (!res.ok) throw new Error('Failed to update custom pricing');
+      setCustomSuccessMsg('🎉 Custom Package rates & Early Delivery charge updated successfully!');
+      setTimeout(() => setCustomSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setCustomErrorMsg(err.message || 'Failed to save custom rates');
+    } finally {
+      setSavingCustom(false);
+    }
+  };
 
   const handleOpenAddModal = () => {
     setEditingPkg(null);
@@ -204,7 +253,7 @@ export default function ManagePackagesPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white">Manage Packages & Rates</h1>
             <p className="text-xs text-gray-400">
-              Create, edit rates, update deliverables, add features, or remove packages across your store.
+              Configure standard packages, custom package builder options, and early delivery charges.
             </p>
           </div>
 
@@ -213,7 +262,7 @@ export default function ManagePackagesPage() {
             className="btn-glow px-4 py-2.5 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
           >
             <Plus className="w-4 h-4" />
-            Add New Package
+            Add New Standard Package
           </button>
         </div>
 
@@ -225,8 +274,247 @@ export default function ManagePackagesPage() {
           </div>
         )}
 
-        {/* Packages Cards Grid */}
-        <div className="space-y-4">
+        {/* ============================================================ */}
+        {/* SECTION 1: CUSTOM PACKAGE & EARLY DELIVERY CONFIGURATOR */}
+        {/* ============================================================ */}
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-brand-500/30 shadow-2xl relative overflow-hidden space-y-6 bg-gradient-to-br from-[#0B0F19] via-[#080C14] to-[#04060A]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-brand-500/10 rounded-full blur-[100px] pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-surface-200/50 pb-4">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 text-xs font-bold border border-brand-500/30 mb-2">
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Custom Package & Add-on Pricing Engine</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                Custom Package & Express Delivery Rates
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Set rates for Early Delivery surcharge, 1st reel, extra reels, durations, and revision add-ons.
+              </p>
+            </div>
+          </div>
+
+          {customSuccessMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-400 text-xs animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span className="font-semibold">{customSuccessMsg}</span>
+            </div>
+          )}
+
+          {customErrorMsg && (
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-rose-400 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{customErrorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveCustomPricing} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              
+              {/* 1. Early / 24-Hour Express Delivery Fee */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border-2 border-amber-500/40 space-y-2 hover:border-amber-400/70 transition-all">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
+                    <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    Early Delivery Fee (₹)
+                  </label>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                    Express 24h
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Extra charge when client selects 24-Hour Express / Early Delivery.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={10}
+                    required
+                    value={customPricing.urgentDeliveryPrice}
+                    onChange={(e) => setCustomPricing({ ...customPricing, urgentDeliveryPrice: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-amber-500/30 text-white font-mono font-bold text-base focus:outline-none focus:border-amber-400"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+              </div>
+
+              {/* 2. 1st Reel Base Price */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2 hover:border-brand-500/40 transition-all">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Package className="w-4 h-4 text-brand-400" />
+                  1st Reel Base Price (₹)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Starting base price for 1st custom reel (15s duration).
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.baseReelPrice}
+                    onChange={(e) => setCustomPricing({ ...customPricing, baseReelPrice: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Additional Reel Price */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2 hover:border-brand-500/40 transition-all">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  Additional Reel Price (₹)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Rate per additional reel (Reel 2, 3, 4, etc.).
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.additionalReelPrice}
+                    onChange={(e) => setCustomPricing({ ...customPricing, additionalReelPrice: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+              {/* 4. 30 Seconds Duration Add-on */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Clock className="w-4 h-4 text-cyan-400" />
+                  30s Duration Add-on (₹/reel)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Extra cost per reel when selecting 30 Seconds duration.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.duration30Price}
+                    onChange={(e) => setCustomPricing({ ...customPricing, duration30Price: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+              {/* 5. 60 Seconds Duration Add-on */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Clock className="w-4 h-4 text-cyan-400" />
+                  60s Duration Add-on (₹/reel)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Extra cost per reel when selecting 60 Seconds duration.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.duration60Price}
+                    onChange={(e) => setCustomPricing({ ...customPricing, duration60Price: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+              {/* 6. 2 Revisions Add-on */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <RotateCcw className="w-4 h-4 text-violet-400" />
+                  2 Revisions Add-on (₹)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Fixed add-on price for 2 Revisions total.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.revision2Price}
+                    onChange={(e) => setCustomPricing({ ...customPricing, revision2Price: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+              {/* 7. Unlimited Revisions Add-on */}
+              <div className="p-4 rounded-2xl bg-surface-100/60 border border-surface-200/60 space-y-2">
+                <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                  <RotateCcw className="w-4 h-4 text-violet-400" />
+                  Unlimited Revisions Add-on (₹)
+                </label>
+                <p className="text-[11px] text-gray-400">
+                  Fixed add-on price for Unlimited Revisions.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-bold">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    required
+                    value={customPricing.revisionUnlimitedPrice}
+                    onChange={(e) => setCustomPricing({ ...customPricing, revisionUnlimitedPrice: Number(e.target.value) || 0 })}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-surface-200/80 border border-surface-200 text-white font-mono font-bold text-base focus:outline-none focus:border-brand-400"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-surface-200/50">
+              <button
+                type="submit"
+                disabled={savingCustom}
+                className="btn-glow px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-brand-500/30 hover:scale-105 transition-all disabled:opacity-50"
+              >
+                {savingCustom ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving Custom Rates...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    Save Custom Package & Early Delivery Rates
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* ============================================================ */}
+        {/* SECTION 2: STANDARD PACKAGES LIST */}
+        {/* ============================================================ */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Package className="w-5 h-5 text-brand-400" />
+              Standard Pricing Tiers
+            </h2>
+            <span className="text-xs text-gray-400">{packages.length} Packages Configured</span>
+          </div>
+
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 space-y-3">
               <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
@@ -235,8 +523,8 @@ export default function ManagePackagesPage() {
           ) : packages.length === 0 ? (
             <div className="text-center py-16 glass-panel rounded-3xl border border-surface-200/50 space-y-3">
               <Package className="w-12 h-12 text-gray-600 mx-auto" />
-              <p className="text-base font-bold text-white">No Packages Configured Yet</p>
-              <p className="text-xs text-gray-400">Click &quot;Add New Package&quot; to create your first pricing tier.</p>
+              <p className="text-base font-bold text-white">No Standard Packages Found</p>
+              <p className="text-xs text-gray-400">Click &quot;Add New Standard Package&quot; to create your first pricing tier.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -358,16 +646,15 @@ export default function ManagePackagesPage() {
 
         {/* Modal for Create / Edit Package */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
             <div className="w-full max-w-xl glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5 my-8 max-h-[92vh] overflow-y-auto">
               
               <div className="flex items-center justify-between border-b border-surface-200/50 pb-3">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Package className="w-5 h-5 text-brand-400" />
-                  {editingPkg ? 'Edit Package & Pricing' : 'Create New Package'}
+                  {editingPkg ? `Edit ${editingPkg.name}` : 'Create New Standard Package'}
                 </h3>
                 <button 
-                  type="button"
                   onClick={() => setModalOpen(false)} 
                   className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-surface-100 transition-colors"
                 >
@@ -383,35 +670,47 @@ export default function ManagePackagesPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Name & Slug */}
+                
+                {/* Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300">Package Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. 🥈 Professional Package"
+                    className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
+                {/* Price & Slug */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Package Name *</label>
+                    <label className="text-xs font-bold text-gray-300">Price (INR ₹) *</label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Starter Package or Diamond VIP"
-                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-gray-500"
+                      min={1}
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 font-mono font-bold"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-300">Price in INR (₹) *</label>
+                    <label className="text-xs font-bold text-gray-300">Unique Identifier / Slug</label>
                     <input
-                      type="number"
-                      required
-                      min="1"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                      placeholder="e.g. 600 or 1200"
-                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm font-bold text-brand-300 focus:outline-none focus:border-brand-500"
+                      type="text"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      placeholder="e.g. professional"
+                      className="w-full px-4 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 font-mono"
                     />
                   </div>
                 </div>
 
-                {/* Duration, Delivery, Revisions */}
+                {/* Duration, Delivery Days, Revisions */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-300">Duration</label>
@@ -419,8 +718,8 @@ export default function ManagePackagesPage() {
                       type="text"
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                      placeholder="e.g. Up to 15 Seconds"
-                      className="w-full px-3 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 placeholder:text-gray-500"
+                      placeholder="Up to 30 Seconds"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none"
                     />
                   </div>
 
@@ -430,8 +729,8 @@ export default function ManagePackagesPage() {
                       type="text"
                       value={formData.deliveryDays}
                       onChange={(e) => setFormData({ ...formData, deliveryDays: e.target.value })}
-                      placeholder="e.g. Delivery in 2 Days"
-                      className="w-full px-3 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 placeholder:text-gray-500"
+                      placeholder="Delivery in 2 Days"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none"
                     />
                   </div>
 
@@ -441,21 +740,31 @@ export default function ManagePackagesPage() {
                       type="text"
                       value={formData.revisions}
                       onChange={(e) => setFormData({ ...formData, revisions: e.target.value })}
-                      placeholder="e.g. 1 Revision or Unlimited"
-                      className="w-full px-3 py-2.5 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 placeholder:text-gray-500"
+                      placeholder="1 Revision"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none"
                     />
                   </div>
                 </div>
 
-                {/* Features Builder */}
-                <div className="space-y-2 p-3.5 rounded-2xl bg-surface-100/60 border border-surface-200/80">
-                  <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-brand-400" />
-                    Package Features & Deliverables ({formData.features.length})
-                  </label>
+                {/* Popular Flag */}
+                <div className="p-3 rounded-xl bg-surface-100/60 border border-surface-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-white block">Mark as &quot;Most Popular&quot; Badge</label>
+                    <span className="text-[11px] text-gray-400">Highlights this package on the booking and pricing cards.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.popular}
+                    onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
+                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                  />
+                </div>
 
-                  {/* Add Feature input */}
-                  <div className="flex items-center gap-2">
+                {/* Features Builder */}
+                <div className="space-y-2 border-t border-surface-200/50 pt-3">
+                  <label className="text-xs font-bold text-gray-300 block">Deliverables & Features</label>
+                  
+                  <div className="flex gap-2">
                     <input
                       type="text"
                       value={featureInput}
@@ -466,33 +775,30 @@ export default function ManagePackagesPage() {
                           handleAddFeature();
                         }
                       }}
-                      placeholder="Type a feature and press enter or click Add..."
-                      className="flex-1 px-3.5 py-2 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500 placeholder:text-gray-500"
+                      placeholder="Type a feature and press Enter (e.g. 4K UHD Export)"
+                      className="flex-1 px-3.5 py-2 rounded-xl bg-surface-100 border border-surface-200 text-white text-xs focus:outline-none focus:border-brand-500"
                     />
                     <button
                       type="button"
                       onClick={handleAddFeature}
-                      className="px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shrink-0 transition-colors"
+                      className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1 transition-all"
                     >
-                      + Add
+                      <Plus className="w-3.5 h-3.5" />
+                      Add
                     </button>
                   </div>
 
-                  {/* Current Features List with remove buttons */}
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-1">
-                    {formData.features.map((feature, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface-200/60 border border-surface-200 text-xs text-gray-200"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <Check className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                          <span className="truncate">{feature}</span>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {formData.features.map((feat, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-surface-100/80 border border-surface-200 text-xs text-gray-200">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-3 h-3 text-brand-400" />
+                          <span>{feat}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveFeature(idx)}
-                          className="p-1 rounded text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          className="text-gray-400 hover:text-rose-400 transition-colors"
                         >
                           <MinusCircle className="w-3.5 h-3.5" />
                         </button>
@@ -501,40 +807,26 @@ export default function ManagePackagesPage() {
                   </div>
                 </div>
 
-                {/* Popular Toggle Checkbox */}
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="pkg-popular"
-                    checked={formData.popular}
-                    onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
-                    className="w-4 h-4 rounded accent-brand-500 cursor-pointer"
-                  />
-                  <label htmlFor="pkg-popular" className="text-xs font-semibold text-white cursor-pointer select-none">
-                    Highlight as &quot;MOST POPULAR&quot; Package
-                  </label>
-                </div>
-
-                {/* Modal Footer Actions */}
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-200/50">
+                {/* Form Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-200/50">
                   <button
                     type="button"
                     onClick={() => setModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-surface-100 text-gray-300 hover:text-white hover:bg-surface-200 transition-colors"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:bg-surface-100 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="btn-glow px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg shadow-brand-500/20 disabled:opacity-50 flex items-center gap-2"
+                    className="btn-glow px-6 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 shadow-lg shadow-brand-500/30 disabled:opacity-50"
                   >
-                    {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     {editingPkg ? 'Update Package' : 'Create Package'}
                   </button>
                 </div>
-              </form>
 
+              </form>
             </div>
           </div>
         )}
