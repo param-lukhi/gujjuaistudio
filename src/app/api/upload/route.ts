@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import { uploadMediaToCloudinary } from '@/lib/cloudinary';
 import fs from 'fs/promises';
 import path from 'path';
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const mimeType = file.type || (file.name.toLowerCase().endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
 
     // 1. If Cloudinary keys are configured, attempt Cloudinary upload
     if (
@@ -29,11 +31,11 @@ export async function POST(request: Request) {
           return NextResponse.json({ success: true, url: mediaUrl });
         }
       } catch (err) {
-        console.warn('Cloudinary upload failed, attempting storage fallback:', err);
+        console.warn('Cloudinary upload failed, attempting database asset fallback:', err);
       }
     }
 
-    // 2. If running locally, attempt local file storage in public/uploads
+    // 2. If running locally, save file to public/uploads
     const isVercel = process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV;
     if (!isVercel) {
       try {
@@ -49,41 +51,36 @@ export async function POST(request: Request) {
         const localUrl = `/uploads/${uniqueFileName}`;
         return NextResponse.json({ success: true, url: localUrl });
       } catch (localErr) {
-        console.warn('Local storage write failed, falling back to server CDN:', localErr);
+        console.warn('Local storage write failed, falling back to database storage:', localErr);
       }
     }
 
-    // 3. For videos or media on Vercel / serverless: Upload to high-speed static CDN (Direct MP4 Stream)
+    // 3. Primary Production Storage: Store directly in PostgreSQL MediaAsset table
     try {
-      const serverFormData = new FormData();
-      const fileBlob = new Blob([buffer], { type: file.type || 'video/mp4' });
-      serverFormData.append('files[]', fileBlob, file.name || 'video.mp4');
-
-      const cdnRes = await fetch('https://uguu.se/upload.php', {
-        method: 'POST',
-        body: serverFormData,
+      const asset = await prisma.mediaAsset.create({
+        data: {
+          name: file.name || 'uploaded_media',
+          mimeType,
+          data: buffer,
+          size: buffer.length,
+        },
       });
 
-      if (cdnRes.ok) {
-        const cdnJson = await cdnRes.json();
-        if (cdnJson?.files?.[0]?.url) {
-          return NextResponse.json({ success: true, url: cdnJson.files[0].url });
-        }
-      }
-    } catch (cdnErr) {
-      console.warn('Server CDN forwarding failed:', cdnErr);
+      const mediaUrl = `/api/media/${asset.id}`;
+      return NextResponse.json({ success: true, url: mediaUrl });
+    } catch (dbErr: any) {
+      console.warn('MediaAsset database creation failed, trying fallback CDN:', dbErr);
     }
 
-    // 4. For images only (under 1MB), return optimized Base64 data URI
+    // 4. Fallback for images (under 1MB Base64)
     if (file.type.startsWith('image/') && buffer.length <= 1 * 1024 * 1024) {
-      const mimeType = file.type || 'image/jpeg';
       const base64 = buffer.toString('base64');
       const dataUri = `data:${mimeType};base64,${base64}`;
       return NextResponse.json({ success: true, url: dataUri });
     }
 
     return NextResponse.json(
-      { error: 'Media upload failed. Please try again or paste a video link.' },
+      { error: 'Media upload failed. Please try again or paste a direct video link.' },
       { status: 500 }
     );
   } catch (error: any) {

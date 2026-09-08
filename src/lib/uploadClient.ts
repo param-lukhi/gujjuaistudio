@@ -228,28 +228,32 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
 
   const isImage = file.type.startsWith('image/');
   const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v|3gp|wmv|flv|ts|mpeg)$/i.test(file.name);
+  const folder = options.folder || (isVideo ? 'portfolio_videos' : 'thumbnails');
+
+  options.onProgress?.(25, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB...`);
 
   // ==========================================
-  // 1. IMAGE UPLOAD FLOW (Avatars, Thumbnails, Covers)
+  // 1. PRIMARY: Direct /api/upload (Saves to PostgreSQL MediaAsset / Local / Cloudinary)
+  // ==========================================
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.url) {
+        options.onProgress?.(100, isVideo ? 'Video ready & playable' : 'Image uploaded');
+        return json.url;
+      }
+    }
+  } catch (apiErr) {
+    console.warn('/api/upload server attempt failed, trying fallback:', apiErr);
+  }
+
+  // ==========================================
+  // 2. FALLBACK FOR IMAGES: Instant Canvas Compression (<50KB)
   // ==========================================
   if (isImage) {
-    options.onProgress?.(25, 'Uploading image...');
-
-    // 1A. Try local/server endpoint (/api/upload)
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.url && !json.url.startsWith('data:')) {
-          options.onProgress?.(100, 'Image uploaded');
-          return json.url;
-        }
-      }
-    } catch {}
-
-    // 1B. Compressed instant Data URL (<50KB)
     try {
       options.onProgress?.(80, 'Optimizing image...');
       const dataUrl = await compressImageToDataUrl(file);
@@ -261,52 +265,24 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   }
 
   // ==========================================
-  // 2. VIDEO / REEL UPLOAD FLOW (Direct Playable Stream)
+  // 3. FALLBACK FOR VIDEOS: Multi-cloud (Firebase / Playable CDN / Supabase)
   // ==========================================
-  const folder = options.folder || 'portfolio_videos';
-  options.onProgress?.(30, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB video...`);
-
-  // 2A. Primary: Try Server Upload Endpoint (/api/upload -> Direct High-Speed MP4 CDN)
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.url && !json.url.startsWith('data:')) {
-        options.onProgress?.(100, 'Video Ready & Playable');
-        return json.url;
-      }
-    }
-  } catch (apiErr) {
-    console.warn('/api/upload server attempt:', apiErr);
-  }
-
-  // 2B. Secondary: Try Direct Playable CDN (Catbox / MP4 static stream with Byte-Range support)
-  try {
-    const cdnUrl = await uploadVideoToPlayableCDN(file, options.onProgress);
-    if (cdnUrl) return cdnUrl;
-  } catch (cdnErr) {
-    console.warn('Playable CDN fallback:', cdnErr);
-  }
-
-  // 2C. Tertiary: Try Firebase Cloud Storage
   try {
     const firebaseUrl = await uploadToFirebase(file, folder, options.onProgress);
     if (firebaseUrl) return firebaseUrl;
-  } catch (fbErr) {
-    console.warn('Firebase upload fallback:', fbErr);
-  }
+  } catch {}
 
-  // 2D. Quaternary: Try Supabase Storage
+  try {
+    const cdnUrl = await uploadVideoToPlayableCDN(file, options.onProgress);
+    if (cdnUrl) return cdnUrl;
+  } catch {}
+
   try {
     const supabaseUrl = await uploadToSupabaseStorage(file, folder, options.onProgress);
     if (supabaseUrl) return supabaseUrl;
-  } catch (sbErr) {
-    console.warn('Supabase storage fallback:', sbErr);
-  }
+  } catch {}
 
-  throw new Error('Video upload failed across all providers. Please paste a direct video link in the Video Link tab.');
+  throw new Error('Video upload failed. Please try again or paste a direct video link in the Video Link tab.');
 }
 
 

@@ -321,3 +321,12 @@ model HeroShowcase {
   updatedAt           DateTime @default(now()) @updatedAt
 }
 
+model MediaAsset {
+  id        String   @id @default(uuid())
+  name      String
+  mimeType  String   @default("video/mp4")
+  data      Bytes
+  size      Int
+  createdAt DateTime @default(now())
+}
+
