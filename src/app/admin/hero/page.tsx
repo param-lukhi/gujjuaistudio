@@ -7,14 +7,91 @@ import {
   Loader2, CheckCircle2, AlertCircle, RefreshCw, 
   Layers, ExternalLink, Zap, ShieldCheck, Film, 
   Star, Check, Headphones, Video, Flame, Layout, BarChart3,
-  Sliders, Palette
+  Plus, Trash2, Copy, CheckCircle, Radio, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { uploadMediaFile } from '@/lib/uploadClient';
 
+interface HeroItem {
+  id: string;
+  isActive: boolean;
+  heroTopPill: string;
+  heroHeadlineMain: string;
+  heroHeadlineGradient: string;
+  heroSubheadline: string;
+  heroCtaText: string;
+  heroCtaLink: string;
+  heroSecondaryText: string;
+  heroSecondaryLink: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+  trustText: string;
+  badgeText: string;
+  durationText: string;
+  category: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  buttonText: string;
+  buttonLink: string;
+  floatingBadge1Title: string;
+  floatingBadge1Sub: string;
+  floatingBadge1Icon: string;
+  floatingBadge1Color: string;
+  floatingBadge2Title: string;
+  floatingBadge2Sub: string;
+  floatingBadge2Icon: string;
+  floatingBadge2Color: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const BLANK_HERO: Omit<HeroItem, 'id' | 'isActive'> = {
+  heroTopPill: 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery',
+  heroHeadlineMain: 'AI Product Ads That',
+  heroHeadlineGradient: 'Stop the Scroll.',
+  heroSubheadline: 'Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.',
+  heroCtaText: 'Book Your AI Reel Now',
+  heroCtaLink: '/book',
+  heroSecondaryText: 'Watch Portfolio',
+  heroSecondaryLink: '/portfolio',
+  stat1Value: '2 Days',
+  stat1Label: 'Guaranteed Delivery',
+  stat2Value: '₹600',
+  stat2Label: 'Starter Packages',
+  stat3Value: '10x CTR',
+  stat3Label: 'Instagram Boost',
+  trustText: '4.9/5 by 150+ Brands',
+  badgeText: 'AI Reel Demo',
+  durationText: '00:30',
+  category: 'Fashion & Luxury',
+  title: 'Luxury Silk Saree AI Showcase',
+  description: 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.',
+  videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
+  thumbnailUrl: '',
+  buttonText: 'View All 7 Categories',
+  buttonLink: '/portfolio',
+  floatingBadge1Title: 'Commercial Rights',
+  floatingBadge1Sub: '100% Monetization',
+  floatingBadge1Icon: 'check',
+  floatingBadge1Color: 'emerald',
+  floatingBadge2Title: 'AI Voiceover',
+  floatingBadge2Sub: 'Hindi & English',
+  floatingBadge2Icon: 'zap',
+  floatingBadge2Color: 'brand',
+};
+
 export default function AdminHeroPage() {
+  const [showcases, setShowcases] = useState<HeroItem[]>([]);
+  const [selectedHeroId, setSelectedHeroId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -28,48 +105,11 @@ export default function AdminHeroPage() {
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
-    // Left Hero Copy
-    heroTopPill: 'Next-Gen AI Product Video Ads • Fast 2-Day Delivery',
-    heroHeadlineMain: 'AI Product Ads That',
-    heroHeadlineGradient: 'Stop the Scroll.',
-    heroSubheadline: 'Transform simple product photos into viral, high-converting vertical video reels. Powered by hyper-realistic AI models, cinematic voiceovers, and dynamic visual effects.',
-    heroCtaText: 'Book Your AI Reel Now',
-    heroCtaLink: '/book',
-    heroSecondaryText: 'Watch Portfolio',
-    heroSecondaryLink: '/portfolio',
-    
-    // Key Stats Counters
-    stat1Value: '2 Days',
-    stat1Label: 'Guaranteed Delivery',
-    stat2Value: '₹600',
-    stat2Label: 'Starter Packages',
-    stat3Value: '10x CTR',
-    stat3Label: 'Instagram Boost',
-    trustText: '4.9/5 by 150+ Brands',
-
-    // 9:16 Video Reel Card
-    badgeText: 'AI Reel Demo',
-    durationText: '00:30',
-    category: 'Fashion & Luxury',
-    title: 'Luxury Silk Saree AI Showcase',
-    description: 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
-    thumbnailUrl: '',
-    buttonText: 'View All 7 Categories',
-    buttonLink: '/portfolio',
-
-    // Floating Badge 1 (Top-Left)
-    floatingBadge1Title: 'Commercial Rights',
-    floatingBadge1Sub: '100% Monetization',
-    floatingBadge1Icon: 'check',
-    floatingBadge1Color: 'emerald',
-
-    // Floating Badge 2 (Bottom-Right)
-    floatingBadge2Title: 'AI Voiceover',
-    floatingBadge2Sub: 'Hindi & English',
-    floatingBadge2Icon: 'zap',
-    floatingBadge2Color: 'brand',
+  // Form State
+  const [formData, setFormData] = useState<HeroItem>({
+    id: '',
+    isActive: true,
+    ...BLANK_HERO,
   });
 
   const categoriesList = [
@@ -95,32 +135,155 @@ export default function AdminHeroPage() {
   ];
 
   const colorOptions = [
-    { value: 'emerald', label: 'Emerald Green', bgClass: 'bg-emerald-500' },
-    { value: 'cyan', label: 'Cyan Blue', bgClass: 'bg-cyan-500' },
-    { value: 'violet', label: 'Violet Purple', bgClass: 'bg-purple-500' },
-    { value: 'amber', label: 'Amber Gold', bgClass: 'bg-amber-500' },
-    { value: 'rose', label: 'Rose Pink', bgClass: 'bg-rose-500' },
-    { value: 'brand', label: 'Brand Blue', bgClass: 'bg-blue-600' },
+    { value: 'emerald', label: 'Emerald Green' },
+    { value: 'cyan', label: 'Cyan Blue' },
+    { value: 'violet', label: 'Violet Purple' },
+    { value: 'amber', label: 'Amber Gold' },
+    { value: 'rose', label: 'Rose Pink' },
+    { value: 'brand', label: 'Brand Blue' },
   ];
 
-  const fetchHeroData = async () => {
+  // Fetch all hero showcases for CRUD
+  const fetchShowcases = async (keepSelectionId?: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/hero');
+      const res = await fetch('/api/admin/hero?all=true');
       const data = await res.json();
-      if (data) {
-        setFormData((prev) => ({ ...prev, ...data }));
+      if (data.showcases && data.showcases.length > 0) {
+        setShowcases(data.showcases);
+
+        // Select the requested hero, or the active hero, or the first hero
+        let target = data.showcases.find((h: HeroItem) => h.id === keepSelectionId);
+        if (!target) {
+          target = data.showcases.find((h: HeroItem) => h.isActive) || data.showcases[0];
+        }
+
+        setSelectedHeroId(target.id);
+        setFormData(target);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching showcases:', err);
+      setErrorMsg('Failed to load hero showcases');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHeroData();
+    fetchShowcases();
   }, []);
+
+  // Handle switching selected showcase
+  const handleSelectShowcase = (item: HeroItem) => {
+    setSelectedHeroId(item.id);
+    setFormData(item);
+    setSuccessMsg(`Switched to editing: "${item.title}"`);
+    setTimeout(() => setSuccessMsg(null), 2500);
+  };
+
+  // CREATE NEW SHOWCASE (CRUD: Create)
+  const handleAddNewShowcase = async () => {
+    setActionLoading(true);
+    setErrorMsg(null);
+    try {
+      const newPayload = {
+        ...BLANK_HERO,
+        title: `New AI Showcase #${showcases.length + 1}`,
+        isActive: false,
+      };
+
+      const res = await fetch('/api/admin/hero', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPayload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create new showcase');
+
+      setSuccessMsg('🎉 New Hero Showcase added successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchShowcases(data.hero.id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error creating new showcase');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // DUPLICATE SHOWCASE (CRUD: Clone)
+  const handleDuplicateShowcase = async (id: string) => {
+    setActionLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/admin/hero', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'duplicate' }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to duplicate showcase');
+
+      setSuccessMsg('🎉 Hero Showcase duplicated successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchShowcases(data.hero.id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error duplicating showcase');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ACTIVATE SHOWCASE (CRUD: Set Live)
+  const handleActivateShowcase = async (id: string) => {
+    setActionLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/admin/hero', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'activate' }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to activate showcase');
+
+      setSuccessMsg('🔥 This Hero Showcase is now LIVE on the Homepage!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchShowcases(id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error activating showcase');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // DELETE SHOWCASE (CRUD: Delete)
+  const handleDeleteShowcase = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setActionLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/hero?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete showcase');
+
+      setSuccessMsg('🗑️ Hero Showcase deleted successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchShowcases();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error deleting showcase');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -158,7 +321,7 @@ export default function AdminHeroPage() {
     }
   };
 
-  // Save changes to database
+  // SAVE & UPDATE SHOWCASE (CRUD: Update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -175,10 +338,11 @@ export default function AdminHeroPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save changes');
 
-      setSuccessMsg('🎉 Hero Section & Badges updated and published to Homepage successfully!');
+      setSuccessMsg('🎉 Changes saved and updated successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchShowcases(formData.id);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to save hero changes');
+      setErrorMsg(err.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
@@ -219,25 +383,35 @@ export default function AdminHeroPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
               <Sparkles className="w-7 h-7 text-brand-400" />
-              Complete Hero Section & Badge Editor
+              Hero Showcase & Badges Manager (CRUD)
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              Customize everything on your homepage hero: 9:16 Reel, Floating Badges 1 & 2, Headlines, Descriptions, and Stats.
+              Add multiple Hero variations, customize Floating Badges 1 & 2, switch live showcase, edit copy, and delete variations.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleAddNewShowcase}
+              disabled={actionLoading}
+              className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-brand-600/30 transition-all hover:scale-105"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Hero Showcase</span>
+            </button>
+
             <Link
               href="/"
               target="_blank"
               className="px-4 py-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold"
             >
-              <span>View Live Homepage</span>
+              <span>View Homepage</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
             <button
-              onClick={fetchHeroData}
+              onClick={() => fetchShowcases(selectedHeroId)}
               className="p-2.5 rounded-xl bg-surface-100 hover:bg-surface-200 border border-surface-200 text-gray-300 hover:text-white transition-colors"
               title="Reload from Database"
             >
@@ -261,7 +435,99 @@ export default function AdminHeroPage() {
           </div>
         )}
 
-        {/* NAVIGATION TABS */}
+        {/* 1. SHOWCASES LIST / CRUD CARDS SELECTOR */}
+        <div className="glass-panel p-5 rounded-3xl border border-surface-200/80 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Film className="w-4 h-4 text-brand-400" />
+              <span className="text-sm font-bold text-white">All Hero Showcases ({showcases.length})</span>
+            </div>
+            <span className="text-[11px] text-gray-400">Click any card to edit, or activate it for Homepage</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {showcases.map((item) => {
+              const isSelected = item.id === selectedHeroId;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => handleSelectShowcase(item)}
+                  className={`relative p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
+                    isSelected
+                      ? 'bg-brand-950/40 border-brand-500 shadow-lg shadow-brand-500/20 ring-1 ring-brand-500'
+                      : 'bg-surface-100/50 border-surface-200/70 hover:border-surface-200 hover:bg-surface-100'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-surface-200 text-gray-300">
+                      {item.category || 'Category'}
+                    </span>
+
+                    {item.isActive ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        LIVE ON SITE
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleActivateShowcase(item.id);
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-200 hover:bg-brand-600 text-gray-400 hover:text-white transition-colors"
+                      >
+                        Make Live
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-white line-clamp-1">{item.title}</h4>
+                    <p className="text-[11px] text-gray-400 line-clamp-1">{item.description}</p>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="flex items-center justify-between pt-2 border-t border-surface-200/50">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        title="Duplicate this variation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateShowcase(item.id);
+                        }}
+                        className="p-1.5 rounded-lg bg-surface-200/60 hover:bg-surface-200 text-gray-300 hover:text-white transition-colors text-xs"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+
+                      {showcases.length > 1 && (
+                        <button
+                          type="button"
+                          title="Delete this variation"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteShowcase(item.id, item.title);
+                          }}
+                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors text-xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-semibold text-brand-400">
+                      {isSelected ? '✓ Editing Now' : 'Select'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. NAVIGATION TABS FOR ACTIVE SHOWCASE */}
         <div className="flex flex-wrap gap-2 p-1.5 bg-surface-100/80 rounded-2xl border border-surface-200/80">
           <button
             type="button"
@@ -316,7 +582,7 @@ export default function AdminHeroPage() {
           </button>
         </div>
 
-        {/* 2-COLUMN SPLIT: CONTROLS & LIVE PREVIEW */}
+        {/* 3. 2-COLUMN SPLIT: FORM & LIVE PREVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LEFT: FORM CONTROLS (7 Cols) */}
@@ -326,10 +592,23 @@ export default function AdminHeroPage() {
             {activeTab === 'reel' && (
               <div className="space-y-6">
                 <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-surface-200/80 space-y-5">
-                  <h3 className="text-base font-extrabold text-white border-b border-surface-200/50 pb-3 flex items-center gap-2">
-                    <Film className="w-4 h-4 text-brand-400" />
-                    Hero Reel Details & Overlay Text
-                  </h3>
+                  <div className="flex items-center justify-between border-b border-surface-200/50 pb-3">
+                    <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                      <Film className="w-4 h-4 text-brand-400" />
+                      Hero Reel Details & Overlay Text
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-300 font-bold flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.isActive}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                          className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                        />
+                        <span>Live on Homepage</span>
+                      </label>
+                    </div>
+                  </div>
 
                   <div className="space-y-4">
                     {/* Category & Top Badge */}
@@ -472,7 +751,7 @@ export default function AdminHeroPage() {
 
                   {videoMode === 'url' ? (
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-gray-300">Direct Video URL (MP4 / WebM / Cloudinary / Streaming) *</label>
+                      <label className="text-xs font-bold text-gray-300">Direct Video URL (MP4 / WebM / Streaming) *</label>
                       <input
                         type="url"
                         name="videoUrl"
@@ -514,7 +793,7 @@ export default function AdminHeroPage() {
                         ) : (
                           <>
                             <Upload className="w-8 h-8 text-brand-400 mx-auto" />
-                            <p className="text-xs font-bold text-white">Click to Upload Any Video File (No Size Limits / Chunked Upload)</p>
+                            <p className="text-xs font-bold text-white">Click to Upload Any Video File (Chunked Uploading Engine)</p>
                             <p className="text-[11px] text-gray-400">MP4, MOV, WEBM (Vertical 9:16 Recommended)</p>
                           </>
                         )}
@@ -540,7 +819,7 @@ export default function AdminHeroPage() {
                     Customize Floating Badges (1 & 2)
                   </h3>
                   <p className="text-xs text-gray-400 mt-1">
-                    Edit the floating glass badges that animate on the top-left and bottom-right of the 9:16 phone mockup.
+                    Edit title, subtitle, icon, and colors of the floating badges attached to this showcase.
                   </p>
                 </div>
 
@@ -584,7 +863,6 @@ export default function AdminHeroPage() {
                     </div>
                   </div>
 
-                  {/* Icon & Color Selector for Badge 1 */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-gray-300">Badge 1 Icon</label>
@@ -660,7 +938,6 @@ export default function AdminHeroPage() {
                     </div>
                   </div>
 
-                  {/* Icon & Color Selector for Badge 2 */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-gray-300">Badge 2 Icon</label>
@@ -757,7 +1034,6 @@ export default function AdminHeroPage() {
                     />
                   </div>
 
-                  {/* Primary & Secondary Buttons */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-brand-400">Primary Button Text</label>
@@ -822,7 +1098,6 @@ export default function AdminHeroPage() {
                 </h3>
 
                 <div className="space-y-4">
-                  {/* 3 Stat Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Stat 1 */}
                     <div className="space-y-2 p-3.5 rounded-2xl bg-surface-100 border border-surface-200">
@@ -888,7 +1163,6 @@ export default function AdminHeroPage() {
                     </div>
                   </div>
 
-                  {/* Trust Rating Text */}
                   <div className="space-y-1.5 pt-2">
                     <label className="text-xs font-bold text-gray-300">Trust Badge Subtitle Text</label>
                     <input
@@ -905,23 +1179,37 @@ export default function AdminHeroPage() {
             )}
 
             {/* Submit Action Button */}
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-glow w-full py-4 rounded-2xl font-bold text-white text-sm sm:text-base flex items-center justify-center gap-2 shadow-2xl shadow-brand-500/30 disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Publishing Changes to Homepage...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  <span>Save & Publish All Hero Changes to Homepage</span>
-                </>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-glow flex-1 py-4 rounded-2xl font-bold text-white text-sm sm:text-base flex items-center justify-center gap-2 shadow-2xl shadow-brand-500/30 disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    <span>Save "{formData.title || 'Showcase'}"</span>
+                  </>
+                )}
+              </button>
+
+              {!formData.isActive && formData.id && (
+                <button
+                  type="button"
+                  onClick={() => handleActivateShowcase(formData.id)}
+                  disabled={actionLoading}
+                  className="px-6 py-4 rounded-2xl font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Set as Live Homepage</span>
+                </button>
               )}
-            </button>
+            </div>
           </form>
 
           {/* RIGHT: LIVE 9:16 INTERACTIVE WYSIWYG PREVIEW (5 Cols) */}

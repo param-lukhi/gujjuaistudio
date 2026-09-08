@@ -303,7 +303,8 @@ model Review {
 }
 
 model HeroShowcase {
-  id                  String   @id @default("hero-main")
+  id                  String   @id @default(uuid())
+  isActive            Boolean  @default(false)
   
   // Left Hero Copy
   heroTopPill         String   @default("Next-Gen AI Product Video Ads • Fast 2-Day Delivery")
