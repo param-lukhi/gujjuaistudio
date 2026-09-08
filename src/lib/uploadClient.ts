@@ -83,22 +83,24 @@ async function convertFileToDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Uploads a video to high-speed public CDN (TmpFiles / Free Video Stream CDN)
+ * Uploads a video to high-speed Catbox CDN (Direct playable MP4 with HTTP Byte-Range support)
  */
-async function uploadVideoToPublicCDN(
+async function uploadVideoToPlayableCDN(
   file: File,
   onProgress?: (percent: number, statusText?: string) => void
 ): Promise<string> {
-  onProgress?.(40, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB to Cloud CDN...`);
+  onProgress?.(35, `Uploading ${(file.size / (1024 * 1024)).toFixed(1)}MB to High-Speed Video Stream...`);
 
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
-
+  // 1. Try Catbox.moe (Direct static MP4, full CORS, Byte-Ranges)
   try {
-    const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    const res = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
       body: formData,
       signal: controller.signal,
@@ -106,20 +108,40 @@ async function uploadVideoToPublicCDN(
     clearTimeout(timeoutId);
 
     if (res.ok) {
-      const data = await res.json();
-      if (data?.data?.url) {
-        // Convert to direct media streaming URL
-        const directUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-        onProgress?.(100, 'Cloud CDN Ready');
-        return directUrl;
+      const url = (await res.text()).trim();
+      if (url.startsWith('http')) {
+        onProgress?.(100, 'Direct MP4 Stream Ready');
+        return url;
       }
     }
   } catch (err) {
-    clearTimeout(timeoutId);
-    console.warn('Public CDN upload failed, trying next fallback:', err);
+    console.warn('Catbox API attempt:', err);
   }
 
-  throw new Error('Public CDN unavailable');
+  // 2. Try Litterbox
+  try {
+    const litterData = new FormData();
+    litterData.append('reqtype', 'fileupload');
+    litterData.append('time', '72h');
+    litterData.append('fileToUpload', file);
+
+    const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      method: 'POST',
+      body: litterData,
+    });
+
+    if (res.ok) {
+      const url = (await res.text()).trim();
+      if (url.startsWith('http')) {
+        onProgress?.(100, 'Direct MP4 Stream Ready');
+        return url;
+      }
+    }
+  } catch (err) {
+    console.warn('Litterbox attempt:', err);
+  }
+
+  throw new Error('Playable CDN unavailable');
 }
 
 /**
@@ -142,7 +164,14 @@ async function uploadToFirebase(
   const app = getFirebaseApp();
   if (!app) throw new Error('Firebase app not ready');
 
-  const storage = getStorage(app);
+  // Support both custom and default appspot bucket
+  let storage;
+  try {
+    storage = getStorage(app, 'gs://gujjuaistudio-d3377.appspot.com');
+  } catch {
+    storage = getStorage(app);
+  }
+
   const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storageRef = ref(storage, `${folder}/${Date.now()}_${cleanName}`);
 
@@ -192,7 +221,7 @@ async function uploadToFirebase(
 /**
  * Universal media uploader:
  * 1. For images: High-speed server upload with compressed canvas fallback (<50KB)
- * 2. For videos: Multi-cloud video storage (Firebase -> Supabase -> Cloud CDN -> Local Upload)
+ * 2. For videos: Multi-cloud video storage (Playable CDN -> Firebase -> Supabase -> Local Upload)
  */
 export async function uploadMediaFile(file: File, options: UploadOptions = {}): Promise<string> {
   if (!file) throw new Error('No file selected.');
@@ -232,11 +261,19 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
   }
 
   // ==========================================
-  // 2. VIDEO / REEL UPLOAD FLOW
+  // 2. VIDEO / REEL UPLOAD FLOW (Direct Playable Stream)
   // ==========================================
   const folder = options.folder || 'portfolio_videos';
 
-  // 2A. Try Firebase Cloud Storage
+  // 2A. Try Direct Playable CDN (Catbox / MP4 static stream with Byte-Range support)
+  try {
+    const cdnUrl = await uploadVideoToPlayableCDN(file, options.onProgress);
+    if (cdnUrl) return cdnUrl;
+  } catch (cdnErr) {
+    console.warn('Playable CDN fallback:', cdnErr);
+  }
+
+  // 2B. Try Firebase Cloud Storage
   try {
     const firebaseUrl = await uploadToFirebase(file, folder, options.onProgress);
     if (firebaseUrl) return firebaseUrl;
@@ -244,20 +281,12 @@ export async function uploadMediaFile(file: File, options: UploadOptions = {}): 
     console.warn('Firebase upload fallback:', fbErr);
   }
 
-  // 2B. Try Supabase Storage
+  // 2C. Try Supabase Storage
   try {
     const supabaseUrl = await uploadToSupabaseStorage(file, folder, options.onProgress);
     if (supabaseUrl) return supabaseUrl;
   } catch (sbErr) {
     console.warn('Supabase storage fallback:', sbErr);
-  }
-
-  // 2C. Try Public High-Speed Video CDN
-  try {
-    const cdnUrl = await uploadVideoToPublicCDN(file, options.onProgress);
-    if (cdnUrl) return cdnUrl;
-  } catch (cdnErr) {
-    console.warn('Public CDN fallback:', cdnErr);
   }
 
   // 2D. Try Server Upload Endpoint (/api/upload)
