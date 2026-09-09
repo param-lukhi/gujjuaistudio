@@ -12,10 +12,22 @@ interface VideoModalProps {
     title: string;
     category: string;
     videoUrl: string;
-    thumbnailUrl: string;
-    duration: string;
+    thumbnailUrl?: string;
+    duration?: string;
     views?: number;
   } | null;
+}
+
+function getYouTubeEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0` : null;
+}
+
+function getVimeoEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return match ? `https://player.vimeo.com/video/${match[1]}?autoplay=1` : null;
 }
 
 export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
@@ -24,6 +36,9 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
   const [isMuted, setIsMuted] = useState(false);
 
   if (!isOpen || !item) return null;
+
+  const ytEmbed = getYouTubeEmbedUrl(item.videoUrl);
+  const vimeoEmbed = getVimeoEmbedUrl(item.videoUrl);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -68,39 +83,59 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
             
             {/* Inner Video Container */}
             <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-              <video
-                ref={videoRef}
-                src={item.videoUrl}
-                autoPlay
-                preload="auto"
-                playsInline
-                loop
-                muted={isMuted}
-                poster={item.thumbnailUrl}
-                className="w-full h-full object-contain sm:object-cover bg-black cursor-pointer"
-                onClick={togglePlay}
-              />
+              {ytEmbed ? (
+                <iframe
+                  src={ytEmbed}
+                  title={item.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              ) : vimeoEmbed ? (
+                <iframe
+                  src={vimeoEmbed}
+                  title={item.title}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              ) : (
+                <>
+                  <video
+                    ref={videoRef}
+                    src={item.videoUrl}
+                    autoPlay
+                    preload="auto"
+                    playsInline
+                    loop
+                    muted={isMuted}
+                    poster={item.thumbnailUrl || undefined}
+                    className="w-full h-full object-contain sm:object-cover bg-black cursor-pointer"
+                    onClick={togglePlay}
+                  />
 
-              {/* Floating Quick Controls Bar (Play/Pause & Mute) */}
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-auto z-20">
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  className="p-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs flex items-center gap-1.5 transition-colors"
-                >
-                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-white" />}
-                  <span className="text-[10px] font-semibold">{isPlaying ? 'Pause' : 'Play'}</span>
-                </button>
+                  {/* Floating Quick Controls Bar (Play/Pause & Mute) */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-auto z-20">
+                    <button
+                      type="button"
+                      onClick={togglePlay}
+                      className="p-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-white" />}
+                      <span className="text-[10px] font-semibold">{isPlaying ? 'Pause' : 'Play'}</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  className="p-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs flex items-center gap-1.5 transition-colors"
-                >
-                  {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-semibold">{isMuted ? 'Unmute' : 'Mute'}</span>
-                </button>
-              </div>
+                    <button
+                      type="button"
+                      onClick={toggleMute}
+                      className="p-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      <span className="text-[10px] font-semibold">{isMuted ? 'Unmute' : 'Mute'}</span>
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* 9:16 Badge Indicator */}
               <div className="absolute top-3 left-3 z-20 pointer-events-none">
@@ -125,7 +160,7 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
               </span>
               <span className="flex items-center gap-1 text-xs text-gray-300 font-mono bg-surface-100 px-2.5 py-1 rounded-full border border-surface-200">
                 <Clock className="w-3.5 h-3.5 text-brand-400" />
-                {item.duration}
+                {item.duration || '30s'}
               </span>
               <span className="px-2.5 py-1 rounded-full text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
                 ✓ 9:16 Vertical HD
@@ -167,7 +202,7 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
                 <span>Ideal Platforms</span>
                 <span className="font-semibold text-brand-300">Instagram Reels, YouTube Shorts, Meta Ads</span>
               </div>
-              {item.views && (
+              {item.views !== undefined && (
                 <div className="flex items-center justify-between text-gray-300">
                   <span>Showcase Views</span>
                   <span className="font-semibold text-white flex items-center gap-1">

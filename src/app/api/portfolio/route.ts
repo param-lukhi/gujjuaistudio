@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, category, videoUrl, thumbnailUrl, duration, featured } = body;
 
-    if (!title || !category || !videoUrl || !thumbnailUrl) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!title || !category || !videoUrl) {
+      return NextResponse.json({ error: 'Missing required title, category, or videoUrl' }, { status: 400 });
     }
 
     const item = await prisma.portfolioItem.create({
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         title,
         category,
         videoUrl,
-        thumbnailUrl,
+        thumbnailUrl: thumbnailUrl || videoUrl || '',
         duration: duration || '30s',
         featured: Boolean(featured),
       },

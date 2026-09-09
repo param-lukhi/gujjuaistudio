@@ -179,10 +179,11 @@ export default function ManagePortfolioPage() {
       setUploadError('Please provide a Video URL or upload a video file.');
       return;
     }
-    if (!formData.thumbnailUrl) {
-      setUploadError('Please provide a Thumbnail URL or upload a cover image.');
-      return;
-    }
+
+    const payload = {
+      ...formData,
+      thumbnailUrl: formData.thumbnailUrl || formData.videoUrl || '',
+    };
 
     try {
       let res;
@@ -190,13 +191,13 @@ export default function ManagePortfolioPage() {
         res = await fetch(`/api/portfolio/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
       } else {
         res = await fetch('/api/portfolio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
       }
 
@@ -286,7 +287,22 @@ export default function ManagePortfolioPage() {
               {items.map((item) => (
                 <div key={item.id} className="glass-panel p-4 rounded-2xl border border-surface-200/60 space-y-3 relative group hover:border-brand-500/40 transition-all">
                   <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black max-h-[260px]">
-                    <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {item.videoUrl ? (
+                      <video
+                        src={item.videoUrl}
+                        poster={item.thumbnailUrl && item.thumbnailUrl !== item.videoUrl ? item.thumbnailUrl : undefined}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 bg-black"
+                      />
+                    ) : item.thumbnailUrl ? (
+                      <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-brand-950/40 text-brand-400">
+                        <Film className="w-8 h-8" />
+                      </div>
+                    )}
                     
                     {/* Top Badges */}
                     <div className="absolute top-2 left-2 flex flex-wrap gap-1">

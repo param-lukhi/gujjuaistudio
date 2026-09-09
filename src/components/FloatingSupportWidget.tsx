@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { 
   MessageSquare, X, Send, CheckCircle2, Sparkles, 
   User, Mail, Phone, CheckCheck, Loader2, RefreshCw, MessageCircle, Instagram
@@ -24,7 +25,17 @@ interface ChatBubble {
 }
 
 export default function FloatingSupportWidget() {
+  const pathname = usePathname();
   const { data: session } = useSession();
+
+  // Hide the floating widget on auth pages (Login, Register, Password recovery, Admin Login)
+  const hiddenRoutes = ['/login', '/register', '/signup', '/forgot-password', '/reset-password', '/admin/login'];
+  const isAuthPage = hiddenRoutes.some((route) => {
+    if (!pathname) return false;
+    const cleanPath = pathname.toLowerCase().replace(/\/$/, '');
+    return cleanPath === route || cleanPath.startsWith(route + '/');
+  });
+
   const [isOpen, setIsOpen] = useState(false);
   const [showUserInfoPrompt, setShowUserInfoPrompt] = useState(false);
 
@@ -268,6 +279,10 @@ export default function FloatingSupportWidget() {
       }
     }
   };
+
+  if (isAuthPage) {
+    return null;
+  }
 
   return (
     <>

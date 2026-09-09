@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Play, Sparkles, Clock, Eye, Filter } from 'lucide-react';
+import { Play, Sparkles, Clock, Eye, Film, Volume2, VolumeX } from 'lucide-react';
 import VideoModal from './VideoModal';
 
 export interface PortfolioItemType {
@@ -10,8 +10,8 @@ export interface PortfolioItemType {
   title: string;
   category: string;
   videoUrl: string;
-  thumbnailUrl: string;
-  duration: string;
+  thumbnailUrl?: string;
+  duration?: string;
   featured?: boolean;
   views?: number;
 }
@@ -35,53 +35,121 @@ const CATEGORIES = [
   'Restaurant'
 ];
 
+// Helper to extract YouTube video ID
+function getYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
+// Helper to derive effective thumbnail URL
+function getEffectiveThumbnail(videoUrl?: string, thumbnailUrl?: string): string {
+  if (thumbnailUrl && thumbnailUrl.trim() !== '') {
+    return thumbnailUrl.trim();
+  }
+  if (!videoUrl) return '';
+
+  const ytId = getYouTubeId(videoUrl);
+  if (ytId) {
+    return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+  }
+
+  // Cloudinary video thumbnail trick
+  if (videoUrl.includes('cloudinary.com') && videoUrl.match(/\.(mp4|mov|webm)$/i)) {
+    return videoUrl.replace(/\.(mp4|mov|webm)$/i, '.jpg');
+  }
+
+  return '';
+}
+
+// Category specific gradients & subtle themes
+function getCategoryGradient(cat?: string) {
+  switch ((cat || '').toLowerCase()) {
+    case 'beauty':
+      return 'from-pink-600/40 via-purple-900/50 to-[#080B11]';
+    case 'fashion':
+    case 'clothing':
+      return 'from-violet-600/40 via-indigo-900/50 to-[#080B11]';
+    case 'jewelry':
+      return 'from-amber-500/40 via-yellow-900/50 to-[#080B11]';
+    case 'food':
+    case 'restaurant':
+      return 'from-orange-600/40 via-red-950/50 to-[#080B11]';
+    case 'electronics':
+      return 'from-cyan-600/40 via-blue-950/50 to-[#080B11]';
+    default:
+      return 'from-brand-600/40 via-brand-950/50 to-[#080B11]';
+  }
+}
+
 function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () => void }) {
   const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  // Category specific gradients & subtle themes for high-end aesthetic
-  const getCategoryGradient = (cat?: string) => {
-    switch ((cat || '').toLowerCase()) {
-      case 'beauty':
-        return 'from-pink-600/40 via-purple-900/50 to-[#080B11]';
-      case 'fashion':
-      case 'clothing':
-        return 'from-violet-600/40 via-indigo-900/50 to-[#080B11]';
-      case 'jewelry':
-        return 'from-amber-500/40 via-yellow-900/50 to-[#080B11]';
-      case 'food':
-      case 'restaurant':
-        return 'from-orange-600/40 via-red-950/50 to-[#080B11]';
-      case 'electronics':
-        return 'from-cyan-600/40 via-blue-950/50 to-[#080B11]';
-      default:
-        return 'from-brand-600/40 via-brand-950/50 to-[#080B11]';
-    }
-  };
+  const [videoError, setVideoError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const categoryName = item?.category || 'AI Reel';
   const itemTitle = item?.title || 'Commercial AI Video';
-  const hasValidThumb = Boolean(item?.thumbnailUrl) && !imageError;
+  const effectiveThumbnail = getEffectiveThumbnail(item?.videoUrl, item?.thumbnailUrl);
+  const ytId = getYouTubeId(item?.videoUrl);
+  const isDirectVideo = Boolean(item?.videoUrl) && !ytId && !videoError;
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (videoRef.current && isDirectVideo) {
+      videoRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          // Autoplay was blocked or video not ready
+          setIsPlaying(false);
+        });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setIsPlaying(false);
+    if (videoRef.current && isDirectVideo) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
 
   return (
     <div
       onClick={onSelect}
-      className="group relative rounded-2xl overflow-hidden glass-panel border border-surface-200/60 hover:border-brand-500/50 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-brand-500/20 hover:-translate-y-1"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="group relative rounded-2xl overflow-hidden glass-panel border border-surface-200/60 hover:border-brand-500/60 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-brand-500/25 hover:-translate-y-1.5"
     >
       {/* Reel Card Aspect Ratio */}
       <div className={`relative aspect-[9/16] overflow-hidden bg-gradient-to-b ${getCategoryGradient(categoryName)}`}>
-        {hasValidThumb ? (
+        
+        {/* Direct Video element for instant frame preview & hover autoplay */}
+        {isDirectVideo ? (
+          <video
+            ref={videoRef}
+            src={item.videoUrl}
+            poster={effectiveThumbnail || undefined}
+            preload="metadata"
+            muted
+            playsInline
+            loop
+            onError={() => setVideoError(true)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700 bg-black"
+          />
+        ) : effectiveThumbnail && !imageError ? (
+          /* Thumbnail Image Fallback (e.g. YouTube or static image) */
           <img
-            src={item?.thumbnailUrl}
+            src={effectiveThumbnail}
             alt={itemTitle}
             onError={() => setImageError(true)}
-            onLoad={() => setImageLoaded(true)}
-            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
           />
         ) : (
-          /* Graceful Fallback AI Reel Cover when image is expired or loading */
+          /* Graceful Fallback AI Reel Cover when image & video fail to load */
           <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-radial-glow opacity-50 pointer-events-none" />
             <div className="w-16 h-16 rounded-2xl bg-brand-500/20 border border-brand-400/30 flex items-center justify-center mb-4 text-brand-300 shadow-xl group-hover:scale-110 transition-transform">
@@ -97,33 +165,50 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
         )}
 
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/30 group-hover:via-black/40 transition-colors" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/40 group-hover:via-black/10 transition-colors pointer-events-none" />
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-brand-600/90 text-white backdrop-blur-md border border-brand-400/40">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-brand-600/90 text-white backdrop-blur-md border border-brand-400/40 shadow-sm">
             {categoryName}
           </span>
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-gray-200 bg-black/60 border border-white/10 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-brand-400" />
-            {item?.duration || '30s'}
-          </span>
+          
+          <div className="flex items-center gap-1.5">
+            {isPlaying && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 backdrop-blur-md flex items-center gap-1 animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Preview
+              </span>
+            )}
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-gray-200 bg-black/70 border border-white/10 backdrop-blur-md flex items-center gap-1 shadow-sm">
+              <Clock className="w-3 h-3 text-brand-400" />
+              {item?.duration || '30s'}
+            </span>
+          </div>
         </div>
 
         {/* Play Button Glow Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="w-14 h-14 rounded-full bg-brand-600/80 group-hover:bg-brand-500 text-white flex items-center justify-center border border-brand-300/40 shadow-xl group-hover:scale-110 transition-transform duration-300 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div
+            className={`w-14 h-14 rounded-full flex items-center justify-center border transition-all duration-300 shadow-xl backdrop-blur-sm ${
+              isPlaying
+                ? 'opacity-0 scale-75'
+                : 'bg-brand-600/80 group-hover:bg-brand-500 text-white border-brand-300/40 group-hover:scale-110 shadow-brand-500/40'
+            }`}
+          >
             <Play className="w-6 h-6 fill-white ml-0.5" />
           </div>
         </div>
 
         {/* Bottom Text Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5 z-10">
-          <h3 className="text-sm font-bold text-white leading-snug group-hover:text-brand-300 transition-colors">
+        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5 z-10 pointer-events-none">
+          <h3 className="text-sm font-bold text-white leading-snug group-hover:text-brand-300 transition-colors line-clamp-2">
             {itemTitle}
           </h3>
           <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1">
-            <span className="text-gray-300">Click to Play AI Video</span>
+            <span className="text-gray-300 font-medium group-hover:text-white transition-colors">
+              {isPlaying ? 'Playing AI Reel...' : 'Click to Play AI Video'}
+            </span>
             {item?.views !== undefined && (
               <span className="flex items-center gap-1 text-gray-400 font-mono">
                 <Eye className="w-3 h-3 text-brand-400" />
@@ -132,6 +217,7 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
