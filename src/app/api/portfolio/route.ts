@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { DEFAULT_PORTFOLIO_ITEMS } from '@/lib/portfolioData';
 
 export async function GET(request: Request) {
   try {
@@ -15,15 +16,33 @@ export async function GET(request: Request) {
       where.featured = true;
     }
 
-    const items = await prisma.portfolioItem.findMany({
+    let items: any[] = [];
+    try {
+      items = await prisma.portfolioItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
 
+    } catch (dbErr) {
+      console.warn('Prisma portfolio fetch fallback:', dbErr);
+    }
+
+    if (!items || items.length === 0) {
+      items = DEFAULT_PORTFOLIO_ITEMS;
+      if (category && category !== 'All') {
+        items = items.filter(
+          (i) => i.category.toLowerCase() === category.toLowerCase()
+        );
+      }
+      if (featured === 'true') {
+        items = items.filter((i) => i.featured);
+      }
+    }
+
     return NextResponse.json(items);
   } catch (error) {
     console.error('Error fetching portfolio:', error);
-    return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
+    return NextResponse.json(DEFAULT_PORTFOLIO_ITEMS);
   }
 }
 

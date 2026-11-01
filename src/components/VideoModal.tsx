@@ -20,7 +20,7 @@ interface VideoModalProps {
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
   return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0` : null;
 }
 
@@ -28,6 +28,12 @@ function getVimeoEmbedUrl(url?: string): string | null {
   if (!url) return null;
   const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   return match ? `https://player.vimeo.com/video/${match[1]}?autoplay=1` : null;
+}
+
+function getInstagramEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/instagram\.com\/(?:reel|p|tv)\/([\w-]+)/);
+  return match ? `https://www.instagram.com/reel/${match[1]}/embed` : null;
 }
 
 export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
@@ -39,6 +45,7 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
 
   const ytEmbed = getYouTubeEmbedUrl(item.videoUrl);
   const vimeoEmbed = getVimeoEmbedUrl(item.videoUrl);
+  const igEmbed = getInstagramEmbedUrl(item.videoUrl);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -96,6 +103,14 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
                   src={vimeoEmbed}
                   title={item.title}
                   allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              ) : igEmbed ? (
+                <iframe
+                  src={igEmbed}
+                  title={item.title}
+                  allow="autoplay; encrypted-media"
                   allowFullScreen
                   className="w-full h-full border-0"
                 />

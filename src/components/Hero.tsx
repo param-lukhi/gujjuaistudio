@@ -89,7 +89,7 @@ const DEFAULT_HERO: HeroShowcaseData = {
   category: 'Fashion & Luxury',
   title: 'Luxury Silk Saree AI Showcase',
   description: 'Generated purely from 2 flat product photos. Complete with AI lighting & model animation.',
-  videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-golden-dress-40995-large.mp4',
+  videoUrl: '/uploads/1788412577876-Screen_Recording_2026-04-06_200418.mp4',
   buttonText: 'View All 7 Categories',
   buttonLink: '/portfolio',
   

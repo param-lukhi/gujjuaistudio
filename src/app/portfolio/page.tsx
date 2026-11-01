@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import { prisma } from '@/lib/db';
+import { DEFAULT_PORTFOLIO_ITEMS } from '@/lib/portfolioData';
 import Link from 'next/link';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
@@ -20,6 +21,10 @@ export default async function PortfolioPage({
     });
   } catch (e) {
     console.error('Db fetch fallback:', e);
+  }
+
+  if (!portfolioItems || portfolioItems.length === 0) {
+    portfolioItems = DEFAULT_PORTFOLIO_ITEMS;
   }
 
   const initialCat = searchParams.cat || 'All';

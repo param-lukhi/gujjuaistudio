@@ -4,17 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Play, Sparkles, Clock, Eye, Film, Volume2, VolumeX } from 'lucide-react';
 import VideoModal from './VideoModal';
+import { DEFAULT_PORTFOLIO_ITEMS, PortfolioItemType } from '@/lib/portfolioData';
 
-export interface PortfolioItemType {
-  id: string;
-  title: string;
-  category: string;
-  videoUrl: string;
-  thumbnailUrl?: string;
-  duration?: string;
-  featured?: boolean;
-  views?: number;
-}
+export type { PortfolioItemType };
 
 interface PortfolioGridProps {
   items: PortfolioItemType[];
@@ -35,11 +27,17 @@ const CATEGORIES = [
   'Restaurant'
 ];
 
-// Helper to extract YouTube video ID
+// Helper to extract YouTube video ID (supports shorts, watch, embed, youtu.be)
 function getYouTubeId(url?: string): string | null {
   if (!url) return null;
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
   return match ? match[1] : null;
+}
+
+// Helper to check if URL is an Instagram post or reel
+function isInstagramUrl(url?: string): boolean {
+  if (!url) return false;
+  return /instagram\.com\/(?:reel|p|tv)\//.test(url);
 }
 
 // Helper to derive effective thumbnail URL
@@ -93,7 +91,7 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
   const itemTitle = item?.title || 'Commercial AI Video';
   const effectiveThumbnail = getEffectiveThumbnail(item?.videoUrl, item?.thumbnailUrl);
   const ytId = getYouTubeId(item?.videoUrl);
-  const isDirectVideo = Boolean(item?.videoUrl) && !ytId && !videoError;
+  const isDirectVideo = Boolean(item?.videoUrl) && !ytId && !isInstagramUrl(item?.videoUrl) && !videoError;
 
   const handleMouseEnter = () => {
     setIsHovered(true);
@@ -233,7 +231,7 @@ export default function PortfolioGrid({
   const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [selectedVideo, setSelectedVideo] = useState<PortfolioItemType | null>(null);
 
-  const safeList = Array.isArray(items) ? items : [];
+  const safeList = Array.isArray(items) && items.length > 0 ? items : DEFAULT_PORTFOLIO_ITEMS;
 
   const filteredItems = activeCategory === 'All'
     ? safeList

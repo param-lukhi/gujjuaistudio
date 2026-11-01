@@ -7,6 +7,7 @@ import PricingCard from '@/components/PricingCard';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 import { prisma } from '@/lib/db';
+import { DEFAULT_PORTFOLIO_ITEMS } from '@/lib/portfolioData';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, Video, Zap, ShieldCheck, Headphones, Send } from 'lucide-react';
 
@@ -21,6 +22,10 @@ export default async function HomePage() {
     });
   } catch (e) {
     console.error('Db fetch fallback:', e);
+  }
+
+  if (!portfolioItems || portfolioItems.length === 0) {
+    portfolioItems = DEFAULT_PORTFOLIO_ITEMS;
   }
 
   return (
