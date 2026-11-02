@@ -40,6 +40,18 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isAuthenticated = status === 'authenticated';
+
+  const handleUserLogout = (callbackUrl: string = '/login') => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('gujju_client_chat_history');
+      localStorage.removeItem('gujju_client_active_msg_id');
+      localStorage.removeItem('gujju_client_name');
+      localStorage.removeItem('gujju_client_contact');
+      localStorage.removeItem('admin_authenticated');
+      window.dispatchEvent(new Event('gujju_chat_reset'));
+    }
+    signOut({ callbackUrl });
+  };
   const user = session?.user;
 
   useEffect(() => {
@@ -188,7 +200,7 @@ export default function Navbar() {
                   </Link>
 
                   <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => handleUserLogout('/')}
                     className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all flex items-center gap-1.5"
                     title="Logout"
                   >
@@ -343,7 +355,7 @@ export default function Navbar() {
                             <button
                               onClick={() => {
                                 setProfileDropdownOpen(false);
-                                signOut({ callbackUrl: '/login' });
+                                handleUserLogout('/login');
                               }}
                               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-rose-500/20 text-rose-400 font-semibold transition-all"
                             >
@@ -425,7 +437,7 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      signOut({ callbackUrl: '/login' });
+                      handleUserLogout('/login');
                     }}
                     className="w-full py-2.5 rounded-xl text-sm font-semibold text-center text-rose-400 bg-surface-100 border border-surface-200 flex items-center justify-center gap-2"
                   >

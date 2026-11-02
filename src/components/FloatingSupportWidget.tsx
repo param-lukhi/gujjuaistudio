@@ -64,6 +64,15 @@ export default function FloatingSupportWidget() {
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Listen for logout event to clear chat history immediately
+  useEffect(() => {
+    const handleReset = () => {
+      handleResetChat();
+    };
+    window.addEventListener('gujju_chat_reset', handleReset);
+    return () => window.removeEventListener('gujju_chat_reset', handleReset);
+  }, []);
+
   // Load user data from session or localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
