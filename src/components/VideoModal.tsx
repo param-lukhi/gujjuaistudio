@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import { X, Play, Pause, Volume2, VolumeX, Sparkles, ArrowRight, Eye, Clock, Smartphone, CheckCircle2 } from 'lucide-react';
+import { X, Play, Pause, Volume2, VolumeX, Sparkles, ArrowRight, Eye, Clock, Smartphone, CheckCircle2, Sliders } from 'lucide-react';
 
 interface VideoModalProps {
   isOpen: boolean;
@@ -239,6 +239,14 @@ export default function VideoModal({ isOpen, onClose, item }: VideoModalProps) {
               <Sparkles className="w-4 h-4 text-brand-300" />
               Order Similar 9:16 AI Reel
               <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/admin/portfolio"
+              onClick={onClose}
+              className="w-full mt-2.5 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white glass-panel border border-surface-200/60 hover:bg-surface-100 flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Sliders className="w-3.5 h-3.5 text-brand-400" />
+              Manage / Upload Reels (Admin)
             </Link>
           </div>
         </div>

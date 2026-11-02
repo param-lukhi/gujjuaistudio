@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Play, Sparkles, Clock, Eye, Film, Volume2, VolumeX } from 'lucide-react';
+import { Play, Sparkles, Clock, Eye, Film, Volume2, VolumeX, Sliders, Plus } from 'lucide-react';
 import VideoModal from './VideoModal';
 import { DEFAULT_PORTFOLIO_ITEMS, PortfolioItemType } from '@/lib/portfolioData';
 
@@ -166,7 +166,7 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/40 group-hover:via-black/10 transition-colors pointer-events-none" />
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
           <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-brand-600/90 text-white backdrop-blur-md border border-brand-400/40 shadow-sm">
             {categoryName}
           </span>
@@ -178,6 +178,15 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
                 Preview
               </span>
             )}
+            <Link
+              href="/admin/portfolio"
+              onClick={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 px-2.5 py-1 rounded-md text-[10px] font-bold text-white bg-black/80 hover:bg-brand-600 border border-white/20 backdrop-blur-md flex items-center gap-1 transition-all shadow-md pointer-events-auto"
+              title="Manage this Reel in Admin"
+            >
+              <Sliders className="w-3 h-3 text-brand-300" />
+              Manage
+            </Link>
             <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-gray-200 bg-black/70 border border-white/10 backdrop-blur-md flex items-center gap-1 shadow-sm">
               <Clock className="w-3 h-3 text-brand-400" />
               {item?.duration || '30s'}
@@ -247,9 +256,20 @@ export default function PortfolioGrid({
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel border-brand-500/30 text-xs font-semibold text-brand-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Reel Gallery</span>
+          <div className="flex items-center justify-center gap-2.5 flex-wrap">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel border-brand-500/30 text-xs font-semibold text-brand-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Reel Gallery</span>
+            </div>
+
+            <Link
+              href="/admin/portfolio"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-600/30 hover:bg-brand-600 border border-brand-500/40 text-xs font-bold text-white transition-all shadow-md shadow-brand-500/20 hover:scale-105"
+              title="Manage, Upload, or Edit Reels in Admin Dashboard"
+            >
+              <Sliders className="w-3.5 h-3.5 text-brand-300" />
+              <span>⚙️ Manage Reels</span>
+            </Link>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
             {title}
@@ -274,12 +294,31 @@ export default function PortfolioGrid({
               {cat}
             </button>
           ))}
+
+          {/* Manage / Upload Reels Action Button */}
+          <Link
+            href="/admin/portfolio"
+            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap border border-brand-500/60 bg-gradient-to-r from-brand-600/30 to-indigo-600/30 hover:from-brand-600 hover:to-indigo-600 text-brand-300 hover:text-white flex items-center gap-1.5 shadow-md shadow-brand-500/20 hover:scale-105"
+            title="Manage, Upload, or Edit Reels in Admin Dashboard"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Manage / Upload Reels</span>
+          </Link>
         </div>
 
         {/* Grid of Reels */}
         {filteredItems.length === 0 ? (
           <div className="text-center py-16 glass-panel rounded-2xl border-surface-200/50">
             <p className="text-gray-400 text-sm">No reels found in category "{activeCategory}".</p>
+            <div className="pt-3">
+              <Link
+                href="/admin/portfolio"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Upload / Manage Reels in Admin
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -293,9 +332,9 @@ export default function PortfolioGrid({
           </div>
         )}
 
-        {/* Optional View All Button */}
-        {showAllButton && (
-          <div className="text-center pt-12">
+        {/* View All & Manage Reels Action Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-12">
+          {showAllButton && (
             <Link
               href="/portfolio"
               className="btn-glow px-8 py-3.5 rounded-xl text-sm font-bold text-white inline-flex items-center gap-2 shadow-lg shadow-brand-500/25 hover:scale-105 transition-all"
@@ -303,8 +342,16 @@ export default function PortfolioGrid({
               Explore Full 7-Category Reel Showcase
               <Sparkles className="w-4 h-4" />
             </Link>
-          </div>
-        )}
+          )}
+
+          <Link
+            href="/admin/portfolio"
+            className="px-6 py-3.5 rounded-xl text-sm font-bold text-gray-200 hover:text-white glass-panel hover:bg-surface-100/90 border border-surface-200/80 inline-flex items-center gap-2 transition-all shadow-md hover:scale-105"
+          >
+            <Sliders className="w-4 h-4 text-brand-400" />
+            Manage Reels (Admin Portal)
+          </Link>
+        </div>
 
       </div>
 
