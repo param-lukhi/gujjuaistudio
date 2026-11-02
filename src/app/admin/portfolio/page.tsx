@@ -6,9 +6,10 @@ import {
   Film, Plus, Edit, Trash2, Star, Sparkles, X, Check, 
   Upload, Link2, Play, Image as ImageIcon, Loader2, 
   CheckCircle2, AlertCircle, RefreshCw, Monitor, Smartphone, 
-  Square, Video, Layers, Sliders
+  Square, Video, Layers, Sliders, FolderPlus, Tag, RotateCcw
 } from 'lucide-react';
 import { uploadMediaFile } from '@/lib/uploadClient';
+import { DEFAULT_CATEGORIES } from '@/lib/portfolioData';
 
 
 const VIDEO_FORMATS_LIST = [
@@ -63,16 +64,129 @@ export default function ManagePortfolioPage() {
     resolution: '4K Ultra HD (2160p)',
     featured: false,
   });
+  const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [selectedAdminCat, setSelectedAdminCat] = useState<string>('All');
+  const [showCategoryManager, setShowCategoryManager] = useState<boolean>(true);
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [categoryLoading, setCategoryLoading] = useState<boolean>(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [inlineNewCat, setInlineNewCat] = useState<boolean>(false);
+  const [inlineCatName, setInlineCatName] = useState<string>('');
 
-  const categoriesList = [
-    'Fashion',
-    'Clothing',
-    'Jewelry',
-    'Food',
-    'Beauty',
-    'Electronics',
-    'Restaurant'
-  ];
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/portfolio/categories');
+      const data = await res.json();
+      if (data?.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+        setCategoriesList(data.categories);
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+
+    setCategoryLoading(true);
+    setCategoryError(null);
+    try {
+      const res = await fetch('/api/portfolio/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to add category');
+      }
+      setCategoriesList(data.categories || []);
+      setNewCategoryName('');
+      setSuccessMsg(`🎉 New category "${trimmed}" created successfully!`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setCategoryError(err.message || 'Failed to add category');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (catName: string, reelCount: number) => {
+    let confirmMsg = `Are you sure you want to delete category "${catName}"?`;
+    if (reelCount > 0) {
+      confirmMsg += `\n\nNote: ${reelCount} reel(s) are currently tagged with this category.`;
+    }
+    if (!window.confirm(confirmMsg)) return;
+
+    setCategoryLoading(true);
+    setCategoryError(null);
+    try {
+      const res = await fetch(`/api/portfolio/categories?name=${encodeURIComponent(catName)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete category');
+      }
+      setCategoriesList(data.categories || []);
+      setSuccessMsg(`Category "${catName}" deleted successfully.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setCategoryError(err.message || 'Failed to delete category');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const handleResetCategories = async () => {
+    if (!window.confirm('Reset all categories back to default standard 7 categories?')) return;
+    setCategoryLoading(true);
+    setCategoryError(null);
+    try {
+      const res = await fetch('/api/portfolio/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset categories');
+      setCategoriesList(data.categories || []);
+      setSuccessMsg('Categories reset to defaults successfully.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setCategoryError(err.message || 'Failed to reset categories');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const handleInlineCreateCategory = async () => {
+    const trimmed = inlineCatName.trim();
+    if (!trimmed) return;
+    setCategoryLoading(true);
+    try {
+      const res = await fetch('/api/portfolio/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = await res.json();
+      if (res.ok && data.categories) {
+        setCategoriesList(data.categories);
+        setFormData((prev) => ({ ...prev, category: trimmed }));
+        setInlineNewCat(false);
+        setInlineCatName('');
+      } else {
+        alert(data.error || 'Failed to create category');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Failed to create category');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
 
   const fetchItems = async () => {
     setLoading(true);
@@ -89,6 +203,7 @@ export default function ManagePortfolioPage() {
 
   useEffect(() => {
     fetchItems();
+    fetchCategories();
   }, []);
 
   const handleOpenAddModal = () => {
@@ -266,6 +381,124 @@ export default function ManagePortfolioPage() {
           <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-emerald-400 text-xs font-semibold animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        )}
+
+        
+        {/* Category Manager Panel */}
+        {showCategoryManager && (
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-brand-500/30 space-y-4 bg-gradient-to-br from-brand-950/20 via-surface-100/40 to-surface-50/20 relative overflow-hidden shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-200/40 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-brand-400" />
+                  <h3 className="text-base font-bold text-white">Reel Categories &amp; Industry Niches</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                    {categoriesList.length} Active
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Create new categories or delete existing ones. Changes appear live on the public showcase and in the reel upload form.
+                </p>
+              </div>
+
+              {/* Reset to defaults button */}
+              <button
+                type="button"
+                onClick={handleResetCategories}
+                disabled={categoryLoading}
+                className="text-[11px] text-gray-400 hover:text-gray-200 underline decoration-dotted flex items-center gap-1 self-start sm:self-auto disabled:opacity-50"
+                title="Reset back to standard 7 categories"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset Defaults
+              </button>
+            </div>
+
+            {/* Category Error alert */}
+            {categoryError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+                <span>{categoryError}</span>
+                <button onClick={() => setCategoryError(null)} className="text-rose-400 hover:text-white">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Add Category Form */}
+            <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => {
+                    setNewCategoryName(e.target.value);
+                    if (categoryError) setCategoryError(null);
+                  }}
+                  placeholder="Enter new category name (e.g. Footwear, Fitness, Real Estate, Automobile...)"
+                  className="w-full px-4 py-2.5 rounded-xl bg-surface-100/90 border border-surface-200 text-white text-xs sm:text-sm focus:outline-none focus:border-brand-500 transition-all placeholder:text-gray-500"
+                  maxLength={50}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={categoryLoading || !newCategoryName.trim()}
+                className="btn-glow px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white flex items-center justify-center gap-1.5 shadow-md shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {categoryLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add Category</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Categories List (Pills with delete button & reel count) */}
+            <div className="pt-2">
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
+                Current Categories ({categoriesList.length}):
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {categoriesList.map((cat) => {
+                  const reelCount = items.filter(
+                    (i) => (i.category || '').toLowerCase() === cat.toLowerCase()
+                  ).length;
+
+                  return (
+                    <div
+                      key={cat}
+                      className="group inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-xl bg-surface-100/80 border border-surface-200/80 hover:border-brand-500/50 text-xs text-white transition-all shadow-sm"
+                    >
+                      <span className="font-semibold">{cat}</span>
+
+                      {/* Reel count badge */}
+                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-black/50 text-gray-400 group-hover:text-brand-300">
+                        {reelCount} {reelCount === 1 ? 'reel' : 'reels'}
+                      </span>
+
+                      {/* Delete Category Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat, reelCount)}
+                        disabled={categoryLoading}
+                        className="p-1 rounded-md text-gray-400 hover:text-rose-400 hover:bg-rose-500/20 transition-all"
+                        title={`Delete category "${cat}"`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 

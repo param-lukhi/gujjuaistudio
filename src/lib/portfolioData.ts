@@ -9,6 +9,16 @@ export interface PortfolioItemType {
   views?: number;
 }
 
+export const DEFAULT_CATEGORIES: string[] = [
+  'Fashion',
+  'Clothing',
+  'Jewelry',
+  'Food',
+  'Beauty',
+  'Electronics',
+  'Restaurant'
+];
+
 export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemType[] = [
   {
     id: 'default-reel-fashion',

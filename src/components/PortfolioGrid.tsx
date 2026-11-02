@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Play, Sparkles, Clock, Eye, Film, Volume2, VolumeX, Sliders, Plus } from 'lucide-react';
 import VideoModal from './VideoModal';
-import { DEFAULT_PORTFOLIO_ITEMS, PortfolioItemType } from '@/lib/portfolioData';
+import { DEFAULT_CATEGORIES, DEFAULT_PORTFOLIO_ITEMS, PortfolioItemType } from '@/lib/portfolioData';
 
 export type { PortfolioItemType };
 
@@ -239,8 +239,29 @@ export default function PortfolioGrid({
 }: PortfolioGridProps) {
   const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [selectedVideo, setSelectedVideo] = useState<PortfolioItemType | null>(null);
+  const [categories, setCategories] = useState<string[]>(['All', ...DEFAULT_CATEGORIES]);
+
+  useEffect(() => {
+    fetch('/api/portfolio/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+          setCategories(['All', ...data.categories]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const safeList = Array.isArray(items) && items.length > 0 ? items : DEFAULT_PORTFOLIO_ITEMS;
+
+  // Combine dynamic categories with any existing items categories
+  const activeCategoriesList = Array.from(
+    new Set([
+      'All',
+      ...categories.filter(c => c !== 'All'),
+      ...safeList.map((i) => i?.category).filter((c) => Boolean(c))
+    ])
+  );
 
   const filteredItems = activeCategory === 'All'
     ? safeList
@@ -281,7 +302,7 @@ export default function PortfolioGrid({
 
         {/* Category Filters */}
         <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto pb-4 mb-10 no-scrollbar">
-          {CATEGORIES.map((cat) => (
+          {activeCategoriesList.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
