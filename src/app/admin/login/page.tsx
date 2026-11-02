@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
 
     try {
       const res = await signIn('credentials', {
-        email: email.trim(),
+        email: email.trim().toLowerCase() === 'gujjuaistudio@gmail' ? 'gujjuaistudio@gmail.com' : email.trim(),
         password,
         redirect: false,
       });

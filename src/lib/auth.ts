@@ -33,8 +33,90 @@ export const authOptions: NextAuthOptions = {
         }
 
         const input = credentials.email.trim();
-        const cleanEmail = input.toLowerCase();
+        let cleanEmail = input.toLowerCase();
+        if (cleanEmail === 'gujjuaistudio@gmail' || cleanEmail === 'gujjuaistudio@gmail.com') {
+          cleanEmail = 'gujjuaistudio@gmail.com';
+        }
         const cleanPhone = input.replace(/\s+/g, '');
+
+        // Master Studio Owner / Admin Authentication
+        const MASTER_ADMIN_EMAIL = 'gujjuaistudio@gmail.com';
+        const MASTER_ADMIN_PASSWORD = 'Hanumandada@gujju';
+
+        if (cleanEmail === MASTER_ADMIN_EMAIL && credentials.password === MASTER_ADMIN_PASSWORD) {
+          const hashedPassword = await bcrypt.hash(MASTER_ADMIN_PASSWORD, 10);
+          try {
+            const adminUser = await prisma.user.upsert({
+              where: { email: MASTER_ADMIN_EMAIL },
+              update: {
+                password: hashedPassword,
+                role: 'ADMIN',
+                isBlocked: false,
+                isVerified: true,
+                status: 'ACTIVE',
+              },
+              create: {
+                email: MASTER_ADMIN_EMAIL,
+                name: 'Gujju AI Studio Owner',
+                username: 'gujjuaistudio',
+                role: 'ADMIN',
+                password: hashedPassword,
+                isVerified: true,
+                emailVerified: new Date(),
+                businessName: 'Gujju AI Studio HQ',
+              },
+            });
+
+            return {
+              id: adminUser.id,
+              email: adminUser.email,
+              name: adminUser.name || 'Gujju AI Studio Owner',
+              username: adminUser.username || 'gujjuaistudio',
+              role: 'ADMIN',
+              businessName: adminUser.businessName || 'Gujju AI Studio HQ',
+              phoneNumber: adminUser.phoneNumber,
+              emailVerified: adminUser.emailVerified || new Date(),
+              image: adminUser.image,
+              bio: adminUser.bio,
+              country: adminUser.country,
+              state: adminUser.state,
+              city: adminUser.city,
+              address: adminUser.address,
+              website: adminUser.website,
+              instagram: adminUser.instagram,
+              facebook: adminUser.facebook,
+              linkedin: adminUser.linkedin,
+              isBlocked: false,
+              isVerified: true,
+              status: 'ACTIVE',
+            };
+          } catch (upsertErr) {
+            console.warn('Admin upsert notice:', upsertErr);
+            return {
+              id: 'admin_master_owner',
+              email: MASTER_ADMIN_EMAIL,
+              name: 'Gujju AI Studio Owner',
+              username: 'gujjuaistudio',
+              role: 'ADMIN',
+              businessName: 'Gujju AI Studio HQ',
+              phoneNumber: null,
+              emailVerified: new Date(),
+              image: null,
+              bio: 'Head of Creative Engineering',
+              country: 'India',
+              state: 'Gujarat',
+              city: 'Ahmedabad',
+              address: 'SG Highway',
+              website: null,
+              instagram: null,
+              facebook: null,
+              linkedin: null,
+              isBlocked: false,
+              isVerified: true,
+              status: 'ACTIVE',
+            };
+          }
+        }
 
         let user = await prisma.user.findUnique({
           where: { email: cleanEmail },
