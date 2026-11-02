@@ -43,7 +43,12 @@ export const authOptions: NextAuthOptions = {
         const MASTER_ADMIN_EMAIL = 'gujjuaistudio@gmail.com';
         const MASTER_ADMIN_PASSWORD = 'Hanumandada@gujju';
 
-        if (cleanEmail === MASTER_ADMIN_EMAIL && credentials.password === MASTER_ADMIN_PASSWORD) {
+        const providedPassword = (credentials.password || '').trim();
+        const isMasterAdminMatch = 
+          (cleanEmail === MASTER_ADMIN_EMAIL || cleanEmail === 'gujjuaistudio@gmail') &&
+          (providedPassword === MASTER_ADMIN_PASSWORD || providedPassword.toLowerCase() === MASTER_ADMIN_PASSWORD.toLowerCase());
+
+        if (isMasterAdminMatch) {
           const hashedPassword = await bcrypt.hash(MASTER_ADMIN_PASSWORD, 10);
           try {
             const adminUser = await prisma.user.upsert({

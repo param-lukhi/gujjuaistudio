@@ -87,6 +87,8 @@ export default function Testimonials({ reviews = DEFAULT_REVIEWS }: { reviews?: 
                 <img
                   src={rev.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
                   alt={rev.clientName}
+                  loading="lazy"
+                  decoding="async"
                   className="w-11 h-11 rounded-full object-cover border-2 border-brand-500/40"
                 />
                 <div>

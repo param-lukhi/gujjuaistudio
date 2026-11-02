@@ -13,8 +13,12 @@ export async function POST(request: Request) {
 
     let cleanEmail = email.trim().toLowerCase();
     if (cleanEmail === 'gujjuaistudio@gmail') cleanEmail = 'gujjuaistudio@gmail.com';
+    const cleanPassword = (password || '').trim();
 
-    if (cleanEmail === 'gujjuaistudio@gmail.com' && password === 'Hanumandada@gujju') {
+    if (
+      cleanEmail === 'gujjuaistudio@gmail.com' &&
+      (cleanPassword === 'Hanumandada@gujju' || cleanPassword.toLowerCase() === 'hanumandada@gujju')
+    ) {
       return NextResponse.json({
         success: true,
         user: { email: 'gujjuaistudio@gmail.com', name: 'Gujju AI Studio Owner', role: 'ADMIN' },

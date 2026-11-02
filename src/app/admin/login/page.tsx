@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn, getSession, signOut } from 'next-auth/react';
-import { Sparkles, ShieldCheck, Lock, ArrowRight, AlertCircle, KeyRound } from 'lucide-react';
+import { Sparkles, ShieldCheck, Lock, ArrowRight, AlertCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function AdminLoginPage() {
     try {
       const res = await signIn('credentials', {
         email: email.trim().toLowerCase() === 'gujjuaistudio@gmail' ? 'gujjuaistudio@gmail.com' : email.trim(),
-        password,
+        password: password.trim(),
         redirect: false,
       });
 
@@ -98,15 +99,25 @@ export default function AdminLoginPage() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-300">Admin Security Passcode</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter admin password"
-              autoComplete="current-password"
-              className="w-full px-4 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter admin password"
+                autoComplete="current-password"
+                className="w-full pl-4 pr-12 py-3 rounded-xl bg-surface-100/80 border border-surface-200 text-white text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <button

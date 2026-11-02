@@ -13,7 +13,7 @@ export default async function PricingPage() {
   try {
     const pkgs = await prisma.package.findMany({
       where: {
-        slug: { not: 'custom-package-pricing-config' },
+        slug: { notIn: ['custom-package-pricing-config', 'portfolio-categories-config'] },
       },
       orderBy: { price: 'asc' },
     });

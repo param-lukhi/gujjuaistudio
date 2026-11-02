@@ -8,6 +8,11 @@
   --background-end-rgb: 13, 18, 30;
 }
 
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(

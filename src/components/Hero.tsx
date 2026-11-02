@@ -320,9 +320,9 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
             {/* Trust badge */}
             <div className="flex items-center justify-center lg:justify-start gap-3 pt-2 text-xs text-gray-400 flex-wrap">
               <div className="flex -space-x-2">
-                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" alt="Client" />
-                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="Client" />
-                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100" alt="Client" />
+                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" alt="Client" loading="lazy" decoding="async" />
+                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="Client" loading="lazy" decoding="async" />
+                <img className="w-7 h-7 rounded-full border-2 border-[#080B11]" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100" alt="Client" loading="lazy" decoding="async" />
               </div>
               <div className="flex items-center gap-1">
                 <div className="flex text-amber-400">

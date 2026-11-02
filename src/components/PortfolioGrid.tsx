@@ -131,7 +131,7 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
             ref={videoRef}
             src={item.videoUrl}
             poster={effectiveThumbnail || undefined}
-            preload="metadata"
+            preload="none"
             muted
             playsInline
             loop
@@ -143,6 +143,8 @@ function ReelCard({ item, onSelect }: { item: PortfolioItemType; onSelect: () =>
           <img
             src={effectiveThumbnail}
             alt={itemTitle}
+            loading="lazy"
+            decoding="async"
             onError={() => setImageError(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
           />
