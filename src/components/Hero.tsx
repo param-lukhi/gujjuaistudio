@@ -80,8 +80,6 @@ const DEFAULT_HERO: HeroShowcaseData = {
   stat1Label: 'Guaranteed Delivery',
   stat2Value: '₹600',
   stat2Label: 'Starter Packages',
-  stat3Value: '10x CTR',
-  stat3Label: 'Instagram Boost',
   trustText: '4.9/5 by 150+ Brands',
 
   badgeText: 'AI Reel Demo',
@@ -281,7 +279,7 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
             </p>
 
             {/* Stat Counters / Highlights */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 max-w-lg mx-auto lg:mx-0">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2 max-w-sm mx-auto lg:mx-0">
               <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
                 <div className="text-lg sm:text-2xl font-black text-white">{heroData.stat1Value || '2 Days'}</div>
                 <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat1Label || 'Guaranteed Delivery'}</div>
@@ -289,10 +287,6 @@ export default function Hero({ initialData }: { initialData?: HeroShowcaseData }
               <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
                 <div className="text-lg sm:text-2xl font-black text-brand-400">{heroData.stat2Value || '₹600'}</div>
                 <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat2Label || 'Starter Packages'}</div>
-              </div>
-              <div className="glass-panel p-2.5 sm:p-3.5 rounded-2xl border-surface-200/50 text-center">
-                <div className="text-lg sm:text-2xl font-black text-emerald-400">{heroData.stat3Value || '10x CTR'}</div>
-                <div className="text-[10px] sm:text-[11px] text-gray-400 font-medium leading-tight">{heroData.stat3Label || 'Instagram Boost'}</div>
               </div>
             </div>
 
