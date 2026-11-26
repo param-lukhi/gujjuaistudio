@@ -1,6 +1,67 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
+const DEFAULT_PACKAGES = [
+  {
+    id: 'starter',
+    slug: 'starter',
+    name: '🥉 Starter Package',
+    price: 600,
+    duration: 'Up to 15 Seconds',
+    revisions: '1 Revision',
+    deliveryDays: 'Delivery in 2 Days',
+    features: JSON.stringify([
+      '1 AI Product Reel',
+      'Up to 15 Seconds',
+      '1 Revisions',
+      'Delivery in 2 Days',
+      '1080p HD Vertical Reel Format'
+    ]),
+    popular: false,
+  },
+  {
+    id: 'professional',
+    slug: 'professional',
+    name: '🥈 Professional Package',
+    price: 1200,
+    duration: 'Up to 30 Seconds Each',
+    revisions: '1 Revision',
+    deliveryDays: 'Delivery in 2 Days',
+    features: JSON.stringify([
+      '1 AI Product Reels',
+      'Up to 30 Seconds Each',
+      'AI Voiceover (Hindi / English)',
+      'Commercial Use Rights',
+      '1 Revisions',
+      'Delivery in 2 Days',
+      '4K Ultra HD Reel Format'
+    ]),
+    popular: true,
+  },
+  {
+    id: 'premium',
+    slug: 'premium',
+    name: '🥇 Premium Package',
+    price: 2300,
+    duration: 'Up to 60 Seconds Each',
+    revisions: '1 Revision',
+    deliveryDays: 'Delivery in 2 Days',
+    features: JSON.stringify([
+      '1 AI Product Reels',
+      'Up to 60 Seconds Each',
+      'AI Voiceover',
+      'Background Music',
+      '1 Revisions',
+      'Delivery in 2 Days',
+      'Cinematic Script & VFX',
+      'Full Commercial & Ad Rights'
+    ]),
+    popular: false,
+  },
+];
+
 export async function GET() {
   try {
     const packages = await prisma.package.findMany({
@@ -9,10 +70,13 @@ export async function GET() {
       },
       orderBy: { price: 'asc' },
     });
-    return NextResponse.json(packages);
+    if (packages && packages.length > 0) {
+      return NextResponse.json(packages);
+    }
+    return NextResponse.json(DEFAULT_PACKAGES);
   } catch (error) {
-    console.error('Error fetching packages:', error);
-    return NextResponse.json({ error: 'Failed to fetch packages' }, { status: 500 });
+    console.error('Error fetching packages from DB, using fallback:', error);
+    return NextResponse.json(DEFAULT_PACKAGES);
   }
 }
 
